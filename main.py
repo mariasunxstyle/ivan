@@ -127,6 +127,8 @@ async def pos_timer():
                 usr["elapsed"] = 0
                 await advance_position(chat_id)
 
+async def on_startup(dp):
+    asyncio.create_task(pos_timer())
+
 if __name__ == "__main__":
-    dp.loop.create_task(pos_timer())
-    executor.start_polling(dp, skip_updates=True)
+    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
