@@ -5,9 +5,13 @@ import logging
 import os
 
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import ReplyKeyboardRemove
 from aiogram.utils import executor
-from handlers import *
+from handlers import (
+    steps_keyboard, control_keyboard, control_keyboard_full_vertical, control_keyboard_end,
+    POSITIONS, DURATIONS_MIN, format_duration,
+    STEP_COMPLETED_MESSAGE, ALL_STEPS_DONE_MESSAGE, SESSION_TERMINATED_MESSAGE,
+    GREETING, INFO_TEXT
+)
 
 API_TOKEN = os.getenv("TOKEN")
 CHANNEL_USERNAME = os.getenv("CHANNEL")
@@ -20,47 +24,16 @@ dp = Dispatcher(bot)
 user_state = {}
 tasks = {}
 
-ALL_STEPS_DONE_MESSAGE = (
-    "Ты завершил(а) все 12 шагов по методу суперкомпенсации!\n"
-    "Кожа адаптировалась — теперь можешь поддерживать загар в комфортном ритме ☀️"
-)
-SESSION_TERMINATED_MESSAGE = (
-    "Сеанс завершён.\nМожешь вернуться позже и начать заново ☀️"
-)
-
 # Приветствие и старт
 @dp.message_handler(commands=['start'])
 async def send_welcome(message: types.Message):
-    welcome_text = (
-        "Привет, солнце! ☀️\n"
-        "Ты в таймере по методу суперкомпенсации.\n"
-        "Кожа адаптируется к солнцу постепенно — и загар получается ровным, глубоким и без ожогов.\n\n"
-        "Метод основан на научных принципах: короткие интервалы активируют выработку меланина и гормонов адаптации.\n"
-        "Такой подход снижает риск ожогов и делает загар устойчивым.\n\n"
-        "Начинай с шага 1 — даже если уже немного загорел(а).\n"
-        "Каждый новый день и после перерыва — возвращайся на 2 шага назад.\n\n"
-        "Хочешь подробности — жми /info."
-    )
-    await message.answer(welcome_text, reply_markup=steps_keyboard)
+    await message.answer(GREETING, reply_markup=steps_keyboard)
 
 # Инфо
 @dp.message_handler(commands=['info'])
 @dp.message_handler(lambda m: m.text == "ℹ️ Инфо")
 async def send_info(message: types.Message):
-    info_text = (
-        "ℹ️ Инфо\n"
-        "Метод суперкомпенсации — научно обоснованный способ безопасного загара.\n"
-        "Ты проходишь 12 шагов — каждый с таймингом и сменой позиций.\n\n"
-        "Как использовать:\n"
-        "1. Начни с шага 1\n"
-        "2. Включи таймер и следуй позициям\n"
-        "3. Каждый новый день и после любого перерыва — возвращайся на 2 шага назад\n"
-        "4. После завершения всех 12 шагов — можешь поддерживать загар в комфортном ритме\n\n"
-        "Рекомендуем загорать с 7:00 до 11:00 и после 17:00 — в это время солнце мягкое, и при отсутствии противопоказаний можно загорать без SPF.\n"
-        "С 11:00 до 17:00 — солнце более агрессивное. Если остаёшься на улице — надевай одежду или используй SPF.\n\n"
-        "Если есть вопросы — пиши: @sunxbeach_director"
-    )
-    await message.answer(info_text)
+    await message.answer(INFO_TEXT)
 
 # Обработка выбора шага
 @dp.message_handler(lambda m: m.text.startswith("Шаг "))
@@ -83,11 +56,11 @@ async def start_position(user_id):
         return
     try:
         position_name = POSITIONS[pos]
-        duration = DURATIONS_MIN[step-1][pos]
+        duration = DURATIONS_MIN[step - 1][pos]
         state['position'] += 1
         tasks[user_id] = asyncio.create_task(position_timer(user_id, position_name, duration, step))
     except IndexError:
-        await bot.send_message(user_id, "Шаг завершён!", reply_markup=complete_keyboard)
+        await bot.send_message(user_id, STEP_COMPLETED_MESSAGE, reply_markup=control_keyboard_full_vertical)
 
 # Таймер позиции
 async def position_timer(user_id, name, minutes, step):
@@ -95,7 +68,7 @@ async def position_timer(user_id, name, minutes, step):
     await asyncio.sleep(minutes * 60)
     state = user_state.get(user_id)
     if state and state['position'] >= len(POSITIONS):
-        await bot.send_message(user_id, "Шаг завершён!", reply_markup=complete_keyboard)
+        await bot.send_message(user_id, STEP_COMPLETED_MESSAGE, reply_markup=control_keyboard_full_vertical)
     else:
         await start_position(user_id)
 
@@ -108,7 +81,7 @@ async def skip_position(message: types.Message):
         task.cancel()
     state = user_state.get(user_id)
     if state and state['position'] >= len(POSITIONS):
-        await bot.send_message(user_id, "Шаг завершён!", reply_markup=complete_keyboard)
+        await bot.send_message(user_id, STEP_COMPLETED_MESSAGE, reply_markup=control_keyboard_full_vertical)
     else:
         await start_position(user_id)
 
@@ -119,7 +92,7 @@ async def end_session(message: types.Message):
     task = tasks.pop(user_id, None)
     if task:
         task.cancel()
-    await bot.send_message(user_id, "Шаг завершён!", reply_markup=control_keyboard_end)
+    await bot.send_message(user_id, STEP_COMPLETED_MESSAGE, reply_markup=control_keyboard_end)
     user_state.pop(user_id, None)
 
 # Назад на 2 шага
@@ -151,3 +124,4 @@ async def back_to_steps(message: types.Message):
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
+
