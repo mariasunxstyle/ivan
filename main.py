@@ -1,176 +1,47 @@
-
-import asyncio
-import logging
-import os
-
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+import asyncio
+import os
 
-from keyboards import get_step_keyboard, get_control_keyboard
+from keyboards import get_step_keyboard, get_control_keyboard, get_post_step_keyboard
 from utils import is_subscribed
 from steps import steps, positions_by_step
 
 API_TOKEN = os.getenv("TOKEN")
 CHANNEL = "@sunxstyle"
 
-logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-# храним прогресс пользователя
-state = {}  # user_id: {"step": int, "pos_index": int}
+state = {}
 
+# Приветствие и инфо
 WELCOME = (
     "Привет, солнце! ☀️\n"
     "Ты в таймере по методу суперкомпенсации.\n"
-    "Кожа адаптируется к солнцу постепенно — и загар становится ровным, глубоким и без ожогов.\n\n"
-    "Начинай с шага 1. Даже если уже немного загорел(а), важно пройти путь с начала.\n"
+    "Кожа адаптируется к солнцу постепенно — и загар получается ровным, глубоким и без ожогов.\n\n"
+    "Метод основан на научных принципах: короткие интервалы активируют выработку меланина и гормонов адаптации.\n"
+    "Такой подход снижает риск ожогов и делает загар устойчивым.\n\n"
+    "Начинай с шага 1 — даже если уже немного загорел(а).\n"
     "Каждый новый день и после перерыва — возвращайся на 2 шага назад.\n\n"
-    "Хочешь разобраться подробнее — жми /info. Там всё по делу."
+    "Хочешь подробности — жми /info."
 )
 
 INFO = (
-    "ℹ️ Метод суперкомпенсации — это безопасный, пошаговый подход к загару.\n"
-    "Он помогает коже адаптироваться к солнцу, снижая риск ожогов и пятен.\n\n"
-    "Рекомендуем загорать с 7:00 до 11:00 и после 17:00 — в это время солнце мягкое,\n"
-    "и при отсутствии противопоказаний можно загорать без SPF.\n"
-    "Так кожа включает свою естественную защиту: вырабатывается меланин и гормоны адаптации.\n\n"
-    "С 11:00 до 17:00 — солнце более агрессивное. Если остаёшься на улице —\n"
-    "надевай одежду, головной убор или используй SPF.\n\n"
-    "Каждый новый день и после перерыва — возвращайся на 2 шага назад.\n"
-    "Это нужно, чтобы кожа не перегружалась и постепенно усиливала защиту.\n\n"
+    "Метод суперкомпенсации — научно обоснованный способ безопасного загара.\n"
+    "Ты проходишь 12 шагов — каждый с таймингом и сменой позиций.\n\n"
+    "Как использовать:\n"
+    "1. Начни с шага 1\n"
+    "2. Включи таймер и следуй позициям\n"
+    "3. Каждый новый день и после любого перерыва — возвращайся на 2 шага назад\n"
+    "4. После завершения всех 12 шагов — можешь поддерживать загар в комфортном ритме\n\n"
+    "Рекомендуем загорать с 7:00 до 11:00 и после 17:00 — в это время солнце мягкое, и при отсутствии противопоказаний можно загорать без SPF.\n"
+    "С 11:00 до 17:00 — солнце более агрессивное. Если остаёшься на улице — надевай одежду или используй SPF.\n\n"
     "Если есть вопросы — пиши: @sunxbeach_director"
 )
 
-# ----- helpers -------------------------------------------------
-def human_time(minutes: int) -> str:
-    h, m = divmod(minutes, 60)
-    return f"{h} ч {m} мин" if h else f"{m} мин"
-
+# Обновим tell_position, чтобы всегда показывать кнопки управления
 async def tell_position(chat_id: int, step: int, pos_index: int):
     name, mins = positions_by_step[step][pos_index]
-    await bot.send_message(chat_id, f"{name} — {human_time(mins)}")
-
-async def advance_position(chat_id: int):
-    usr = state.get(chat_id)
-    if not usr:
-        return
-    step, pos_index = usr["step"], usr["pos_index"]
-    pos_index += 1
-    if pos_index >= len(positions_by_step[step]):
-        await bot.send_message(chat_id, "Шаг завершён!", reply_markup=get_post_step_keyboard())
-        del state[chat_id]
-    else:
-        usr["pos_index"] = pos_index
-        await tell_position(chat_id, step, pos_index)
-
-
-# ----- управление во время шага -----
-
-@dp.message_handler(lambda m: m.text == "⏭️ Продолжить")
-async def continue_step(m: types.Message):
-    user = m.chat.id
-    current = state.get(user, {}).get("step", 1)
-    new_step = min(current + 1, 12)
-    state[user] = {"step": new_step, "pos_index": 0}
-    await tell_position(user, new_step, 0)
-    await m.answer(" ", reply_markup=get_control_keyboard())
-
-@dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
-async def skip_position(m: types.Message):
-    await advance_position(m.chat.id)
-    if m.chat.id in state:
-        await m.answer(" ", reply_markup=get_control_keyboard())
-
-@dp.message_handler(lambda m: m.text == "⛔ Завершить")
-async def end_session(m: types.Message):
-    state.pop(m.chat.id, None)  # сбрасываем состояние, включая таймер
-    kb = ReplyKeyboardMarkup(resize_keyboard=True).add(
-        [KeyboardButton("📋 Вернуться к шагам")],
-        [KeyboardButton("↩️ Назад на 2 шага")]
-    )
-    await m.answer("Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=kb)
-
-@dp.message_handler(lambda m: m.text == "📋 Вернуться к шагам")
-async def back_to_steps(m: types.Message):
-    state.pop(m.chat.id, None)
-    await m.answer("Выбери шаг:", reply_markup=get_step_keyboard())
-
-@dp.message_handler(lambda m: m.text.startswith("↩️ Назад"))
-async def back_two_steps(m: types.Message):
-    current = state.get(m.chat.id, {"step": 1})["step"]
-    new_step = max(1, current - 2)
-    state[m.chat.id] = {"step": new_step, "pos_index": 0}
-    await m.answer(f"Ты вернулся на шаг {new_step}")
-    await tell_position(m.chat.id, new_step, 0)
-    await m.answer(" ", reply_markup=get_control_keyboard())
-
-
-# ----- handlers ------------------------------------------------
-@dp.message_handler(commands=["start"])
-async def cmd_start(m: types.Message):
-    if await is_subscribed(bot, m.from_user.id):
-        await m.answer(WELCOME, reply_markup=get_step_keyboard())
-    else:
-        kb = types.InlineKeyboardMarkup().add(
-            types.InlineKeyboardButton("✅ Я подписан(а)", callback_data="check_sub"))
-        await m.answer("Чтобы пользоваться ботом, нужно быть подписан(а) на канал @sunxstyle.", reply_markup=kb)
-
-@dp.callback_query_handler(lambda c: c.data == "check_sub")
-async def cb_check_sub(call: types.CallbackQuery):
-    if await is_subscribed(bot, call.from_user.id):
-        await call.message.edit_text(WELCOME, reply_markup=get_step_keyboard())
-    else:
-        await call.answer("Пока не вижу подписки...", show_alert=True)
-
-@dp.message_handler(commands=["info"])
-async def cmd_info(m: types.Message):
-    await m.answer(INFO)
-
-@dp.message_handler(lambda m: m.text and m.text.startswith("Шаг"))
-async def select_step(m: types.Message):
-    step_num = int(m.text.split()[1])
-    state[m.from_user.id] = {"step": step_num, "pos_index": 0}
-    await tell_position(m.chat.id, step_num, 0)
-    await m.answer(" ", reply_markup=get_control_keyboard())
-
-@dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
-async def skip(m: types.Message):
-    await advance_position(m.chat.id)
-
-@dp.message_handler(lambda m: m.text == "⛔ Завершить")
-async def stop(m: types.Message):
-    state.pop(m.chat.id, None)
-    await m.answer("Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=get_post_step_keyboard())
-
-@dp.message_handler(lambda m: m.text.startswith("↩️ Назад"))
-async def back_two(m: types.Message):
-    usr = state.get(m.chat.id, {"step": 1})
-    new_step = max(1, usr["step"] - 2)
-    state[m.chat.id] = {"step": new_step, "pos_index": 0}
-    await tell_position(m.chat.id, new_step, 0)
-
-@dp.message_handler(lambda m: m.text == "📋 Вернуться к шагам")
-async def to_menu(m: types.Message):
-    state.pop(m.chat.id, None)
-    await m.answer("Выбери шаг:", reply_markup=get_step_keyboard())
-
-# background position timer
-async def pos_timer():
-    while True:
-        await asyncio.sleep(60)  # tick every minute
-        for chat_id in list(state.keys()):
-            usr = state[chat_id]
-            step = usr["step"]
-            name, mins = positions_by_step[step][usr["pos_index"]]
-            usr.setdefault("elapsed", 0)
-            usr["elapsed"] += 1
-            if usr["elapsed"] >= mins:
-                usr["elapsed"] = 0
-                await advance_position(chat_id)
-
-async def on_startup(dp):
-    asyncio.create_task(pos_timer())
-
-if __name__ == "__main__":
-    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
+    await bot.send_message(chat_id, f"{name} — {mins} мин", reply_markup=get_control_keyboard())
