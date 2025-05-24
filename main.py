@@ -7,12 +7,15 @@ import os
 from keyboards import get_step_keyboard, get_control_keyboard, get_post_step_keyboard
 from utils import is_subscribed
 from steps import steps, positions_by_step
+from handlers import register_handlers
 
 API_TOKEN = os.getenv("TOKEN")
 CHANNEL = "@sunxstyle"
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
+
+register_handlers(dp)
 
 state = {}
 
@@ -41,7 +44,6 @@ INFO = (
     "Если есть вопросы — пиши: @sunxbeach_director"
 )
 
-# Обновим tell_position, чтобы всегда показывать кнопки управления
 async def tell_position(chat_id: int, step: int, pos_index: int):
     name, mins = positions_by_step[step][pos_index]
     await bot.send_message(chat_id, f"{name} — {mins} мин", reply_markup=get_control_keyboard())

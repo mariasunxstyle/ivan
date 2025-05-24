@@ -1,4 +1,3 @@
-
 from aiogram import types
 from aiogram.dispatcher import Dispatcher
 from utils import is_subscribed
