@@ -2,6 +2,9 @@ from aiogram import types
 from aiogram.dispatcher import Dispatcher
 from utils import is_subscribed
 from keyboards import get_step_keyboard
+import logging
+
+logger = logging.getLogger(__name__)
 
 async def start_handler(message: types.Message):
     if await is_subscribed(message.bot, message.from_user.id):
@@ -36,6 +39,21 @@ async def info_handler(message: types.Message):
         "Если есть вопросы — пиши: @sunxbeach_director"
     )
 
+async def step_handler(message: types.Message):
+    logger.info(f"Получен шаг: {message.text}")
+    try:
+        step_num = int(message.text.split()[1])
+    except (IndexError, ValueError):
+        await message.answer("Не удалось определить номер шага.")
+        return
+
+    from main import state, tell_position
+    state[message.chat.id] = {"step": step_num, "pos_index": 0}
+    await message.answer(f"Шаг {step_num}")
+    await tell_position(message.chat.id, step_num, 0)
+
+
 def register_handlers(dp: Dispatcher):
     dp.register_message_handler(start_handler, commands=["start"])
     dp.register_message_handler(info_handler, commands=["info"])
+    dp.register_message_handler(step_handler, lambda m: m.text and m.text.startswith("Шаг"))
