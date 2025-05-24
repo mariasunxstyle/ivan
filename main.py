@@ -1,4 +1,4 @@
-# main.py для бота SUNXSTYLE
+# main.py для Telegram-бота SUNXSTYLE
 
 import asyncio
 import logging
@@ -16,11 +16,10 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-# Хранилище состояния пользователей
 user_state = {}
 tasks = {}
 
-# Приветствие и старт
+# Старт
 @dp.message_handler(commands=['start'])
 async def send_welcome(message: types.Message):
     await message.answer(GREETING, reply_markup=steps_keyboard)
@@ -31,7 +30,7 @@ async def send_welcome(message: types.Message):
 async def send_info(message: types.Message):
     await message.answer(INFO_TEXT)
 
-# Обработка выбора шага
+# Выбор шага
 @dp.message_handler(lambda m: m.text.startswith("Шаг "))
 async def handle_step(message: types.Message):
     user_id = message.chat.id
@@ -39,28 +38,30 @@ async def handle_step(message: types.Message):
     user_state[user_id] = {"step": step_num, "position": 0}
     await start_position(user_id)
 
-# Начать позицию с таймером
+# Запуск позиции
 async def start_position(user_id):
     state = user_state.get(user_id)
     if not state:
         return
-    step = state['step']
-    pos = state['position']
+    step = state["step"]
+    pos = state["position"]
+
     if step > 12:
-        await bot.send_message(user_id, ALL_STEPS_DONE_MESSAGE, reply_markup=steps_keyboard)
+        await bot.send_message(user_id, ALL_STEPS_DONE_MESSAGE, reply_markup=end_keyboard)
         user_state.pop(user_id, None)
         return
+
     try:
         position_name = POSITIONS[pos]
-        duration = DURATIONS_MIN[step-1][pos]
-        state['position'] += 1
-        tasks[user_id] = asyncio.create_task(position_timer(user_id, position_name, duration, step))
+        duration = DURATIONS_MIN[step - 1][pos]
+        await bot.send_message(user_id, f"{position_name} — {format_duration(duration)}", reply_markup=control_keyboard)
+        state["position"] += 1
+        tasks[user_id] = asyncio.create_task(position_timer(user_id, duration))
     except IndexError:
-        await bot.send_message(user_id, STEP_COMPLETED_MESSAGE, reply_markup=complete_keyboard)
+        await bot.send_message(user_id, STEP_COMPLETED_MESSAGE, reply_markup=control_keyboard_full_vertical)
 
-# Таймер позиции
-async def position_timer(user_id, name, minutes, step):
-    await bot.send_message(user_id, f"{name} — {format_duration(minutes)}", reply_markup=control_keyboard)
+# Таймер
+async def position_timer(user_id, minutes):
     await asyncio.sleep(minutes * 60)
     await start_position(user_id)
 
@@ -80,7 +81,7 @@ async def end_session(message: types.Message):
     task = tasks.pop(user_id, None)
     if task:
         task.cancel()
-    await bot.send_message(user_id, SESSION_TERMINATED_MESSAGE, reply_markup=steps_keyboard)
+    await bot.send_message(user_id, SESSION_TERMINATED_MESSAGE, reply_markup=end_keyboard)
     user_state.pop(user_id, None)
 
 # Назад на 2 шага
@@ -89,10 +90,13 @@ async def go_back(message: types.Message):
     user_id = message.chat.id
     state = user_state.get(user_id)
     if not state or state['step'] <= 2:
-        await bot.send_message(user_id, BACK_LIMIT_MESSAGE)
+        await message.answer(BACK_LIMIT_MESSAGE)
         return
     state['step'] -= 2
     state['position'] = 0
+    step_num = state['step']
+    await bot.send_message(user_id, f"Шаг {step_num}")
+    await asyncio.sleep(0.3)
     await start_position(user_id)
 
 # Вернуться к шагам
@@ -107,3 +111,4 @@ async def back_to_steps(message: types.Message):
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
+
