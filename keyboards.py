@@ -1,3 +1,4 @@
+
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from steps import steps
 
@@ -18,4 +19,12 @@ def get_control_keyboard():
         KeyboardButton("⛔ Завершить"),
         KeyboardButton("↩️ Назад на 2 шага"),
         KeyboardButton("📋 Вернуться к шагам")
+    )
+
+def get_post_step_keyboard():
+    return ReplyKeyboardMarkup(resize_keyboard=True).add(
+        [KeyboardButton("⏭️ Продолжить")],
+        [KeyboardButton("📋 Вернуться к шагам")],
+        [KeyboardButton("↩️ Назад на 2 шага")],
+        [KeyboardButton("⛔ Завершить")]
     )

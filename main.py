@@ -58,11 +58,53 @@ async def advance_position(chat_id: int):
     step, pos_index = usr["step"], usr["pos_index"]
     pos_index += 1
     if pos_index >= len(positions_by_step[step]):
-        await bot.send_message(chat_id, "Шаг завершён!", reply_markup=get_step_keyboard())
+        await bot.send_message(chat_id, "Шаг завершён!", reply_markup=get_post_step_keyboard())
         del state[chat_id]
     else:
         usr["pos_index"] = pos_index
         await tell_position(chat_id, step, pos_index)
+
+
+# ----- управление во время шага -----
+
+@dp.message_handler(lambda m: m.text == "⏭️ Продолжить")
+async def continue_step(m: types.Message):
+    user = m.chat.id
+    current = state.get(user, {}).get("step", 1)
+    new_step = min(current + 1, 12)
+    state[user] = {"step": new_step, "pos_index": 0}
+    await tell_position(user, new_step, 0)
+    await m.answer(" ", reply_markup=get_control_keyboard())
+
+@dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
+async def skip_position(m: types.Message):
+    await advance_position(m.chat.id)
+    if m.chat.id in state:
+        await m.answer(" ", reply_markup=get_control_keyboard())
+
+@dp.message_handler(lambda m: m.text == "⛔ Завершить")
+async def end_session(m: types.Message):
+    state.pop(m.chat.id, None)  # сбрасываем состояние, включая таймер
+    kb = ReplyKeyboardMarkup(resize_keyboard=True).add(
+        [KeyboardButton("📋 Вернуться к шагам")],
+        [KeyboardButton("↩️ Назад на 2 шага")]
+    )
+    await m.answer("Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=kb)
+
+@dp.message_handler(lambda m: m.text == "📋 Вернуться к шагам")
+async def back_to_steps(m: types.Message):
+    state.pop(m.chat.id, None)
+    await m.answer("Выбери шаг:", reply_markup=get_step_keyboard())
+
+@dp.message_handler(lambda m: m.text.startswith("↩️ Назад"))
+async def back_two_steps(m: types.Message):
+    current = state.get(m.chat.id, {"step": 1})["step"]
+    new_step = max(1, current - 2)
+    state[m.chat.id] = {"step": new_step, "pos_index": 0}
+    await m.answer(f"Ты вернулся на шаг {new_step}")
+    await tell_position(m.chat.id, new_step, 0)
+    await m.answer(" ", reply_markup=get_control_keyboard())
+
 
 # ----- handlers ------------------------------------------------
 @dp.message_handler(commands=["start"])
@@ -99,7 +141,7 @@ async def skip(m: types.Message):
 @dp.message_handler(lambda m: m.text == "⛔ Завершить")
 async def stop(m: types.Message):
     state.pop(m.chat.id, None)
-    await m.answer("Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=get_step_keyboard())
+    await m.answer("Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=get_post_step_keyboard())
 
 @dp.message_handler(lambda m: m.text.startswith("↩️ Назад"))
 async def back_two(m: types.Message):
