@@ -54,7 +54,7 @@ async def send_info(message: types.Message):
         "Как использовать:\n"
         "1. Начни с шага 1\n"
         "2. Включи таймер и следуй позициям\n"
-        "3. Каждый новый день и после любого перерыва — возвращайся на 2 шага назад\n"
+        "3. Каждый новый день — возвращайся на 2 шага назад\n"
         "4. После завершения всех 12 шагов — можешь поддерживать загар в комфортном ритме\n\n"
         "Рекомендуем загорать с 7:00 до 11:00 и после 17:00 — в это время солнце мягкое, и при отсутствии противопоказаний можно загорать без SPF.\n"
         "С 11:00 до 17:00 — солнце более агрессивное. Если остаёшься на улице — надевай одежду или используй SPF.\n\n"
@@ -87,13 +87,17 @@ async def start_position(user_id):
         state['position'] += 1
         tasks[user_id] = asyncio.create_task(position_timer(user_id, position_name, duration, step))
     except IndexError:
-        await bot.send_message(user_id, reply_markup=complete_keyboard)
+        await bot.send_message(user_id, "Шаг завершён!", reply_markup=complete_keyboard)
 
 # Таймер позиции
 async def position_timer(user_id, name, minutes, step):
     await bot.send_message(user_id, f"{name} — {format_duration(minutes)}", reply_markup=control_keyboard)
     await asyncio.sleep(minutes * 60)
-    await start_position(user_id)
+    state = user_state.get(user_id)
+    if state and state['position'] >= len(POSITIONS):
+        await bot.send_message(user_id, "Шаг завершён!", reply_markup=complete_keyboard)
+    else:
+        await start_position(user_id)
 
 # Пропустить
 @dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
@@ -102,7 +106,11 @@ async def skip_position(message: types.Message):
     task = tasks.pop(user_id, None)
     if task:
         task.cancel()
-    await start_position(user_id)
+    state = user_state.get(user_id)
+    if state and state['position'] >= len(POSITIONS):
+        await bot.send_message(user_id, "Шаг завершён!", reply_markup=complete_keyboard)
+    else:
+        await start_position(user_id)
 
 # Завершить
 @dp.message_handler(lambda m: m.text == "⛔ Завершить")
@@ -111,7 +119,7 @@ async def end_session(message: types.Message):
     task = tasks.pop(user_id, None)
     if task:
         task.cancel()
-    await bot.send_message(user_id, reply_markup=control_keyboard_end)
+    await bot.send_message(user_id, "Шаг завершён!", reply_markup=control_keyboard_end)
     user_state.pop(user_id, None)
 
 # Назад на 2 шага
