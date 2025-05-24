@@ -1,22 +1,22 @@
 
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
-
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from steps import steps
 
+def human_time(m):
+    h, mm = divmod(int(m), 60)
+    return f"{h} ч {mm} мин" if h else f"{mm} мин"
+
 def get_step_keyboard():
-    keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
-    for step in steps:
-        total = sum([t for _, t in step["positions"]])
-        h, m = divmod(total, 60)
-        label = f"Шаг {step['step']} — {h} ч {m} мин" if h else f"Шаг {step['step']} — {m} мин"
-        keyboard.insert(KeyboardButton(label))
-    keyboard.add(KeyboardButton("ℹ️ Инфо"))
-    return keyboard
+    kb = ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
+    for s, mins in steps:
+        kb.insert(KeyboardButton(f"Шаг {s} ({human_time(mins)})"))
+    kb.add(KeyboardButton("ℹ️ Инфо"))
+    return kb
 
 def get_control_keyboard():
     return ReplyKeyboardMarkup(resize_keyboard=True).add(
         KeyboardButton("⏭️ Пропустить"),
         KeyboardButton("⛔ Завершить"),
-        KeyboardButton("↩️ Назад на 2 шага (если был перерыв)"),
+        KeyboardButton("↩️ Назад на 2 шага"),
         KeyboardButton("📋 Вернуться к шагам")
     )
