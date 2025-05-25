@@ -1,7 +1,6 @@
-
 import asyncio
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils import executor
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
@@ -19,18 +18,20 @@ dp = Dispatcher(bot, storage=storage)
 class SessionState(StatesGroup):
     tanning = State()
 
-main_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-for s in steps:
-    main_keyboard.add(KeyboardButton(f"Шаг {s['step']} — {s['duration_min']} мин"))
-main_keyboard.add(KeyboardButton("ℹ️ Инфо"))
+def get_main_keyboard():
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
+    buttons = [KeyboardButton(f"Шаг {s['step']} — {s['duration_min']} мин") for s in steps]
+    keyboard.add(*buttons)
+    keyboard.add(KeyboardButton("ℹ️ Инфо"))
+    return keyboard
 
-control_keyboard = InlineKeyboardMarkup(row_width=1)
-control_keyboard.add(
-    InlineKeyboardButton("⏭️ Пропустить", callback_data="skip"),
-    InlineKeyboardButton("⛔ Завершить", callback_data="stop"),
-    InlineKeyboardButton("↩️ Назад на 2 шага", callback_data="back"),
-    InlineKeyboardButton("📋 Вернуться к шагам", callback_data="menu")
-)
+def get_control_keyboard():
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add(KeyboardButton("⏭️ Пропустить"))
+    keyboard.add(KeyboardButton("⛔ Завершить"))
+    keyboard.add(KeyboardButton("↩️ Назад на 2 шага"))
+    keyboard.add(KeyboardButton("📋 Вернуться к шагам"))
+    return keyboard
 
 @dp.message_handler(commands=['start'])
 async def send_welcome(message: types.Message):
@@ -50,7 +51,7 @@ async def send_welcome(message: types.Message):
         "Каждый новый день и после перерыва — возвращайся на 2 шага назад.\n\n"
         "Хочешь подробности — жми /info."
     )
-    await message.answer(text, reply_markup=main_keyboard)
+    await message.answer(text, reply_markup=get_main_keyboard())
 
 @dp.message_handler(lambda message: message.text.startswith("Шаг "))
 async def handle_step(message: types.Message, state: FSMContext):
@@ -67,39 +68,39 @@ async def run_positions(chat_id, step_num, state: FSMContext):
     position_index = data.get("position_index", 0)
 
     if position_index >= len(step['positions']):
-        await bot.send_message(chat_id, f"Шаг {step_num} завершён! ☀️\nВыбирай следующий шаг или отдохни.", reply_markup=main_keyboard)
+        await bot.send_message(chat_id, f"Шаг {step_num} завершён! ☀️\nВыбирай следующий шаг или отдохни.", reply_markup=get_main_keyboard())
         await state.finish()
         return
 
     pos = step['positions'][position_index]
     duration = int(pos['minutes'] * 60)
-    await bot.send_message(chat_id, f"{pos['name']} — {pos['minutes']} мин", reply_markup=control_keyboard)
+    await bot.send_message(chat_id, f"{pos['name']} — {pos['minutes']} мин", reply_markup=get_control_keyboard())
     await asyncio.sleep(duration)
 
     await state.update_data(position_index=position_index + 1)
     await run_positions(chat_id, step_num, state)
 
-@dp.callback_query_handler(lambda c: c.data in ["skip", "stop", "back", "menu"])
-async def process_callback(callback_query: types.CallbackQuery, state: FSMContext):
+@dp.message_handler(lambda message: message.text in ["⏭️ Пропустить", "⛔ Завершить", "↩️ Назад на 2 шага", "📋 Вернуться к шагам"])
+async def handle_controls(message: types.Message, state: FSMContext):
     data = await state.get_data()
     step_num = data.get("step")
     position_index = data.get("position_index", 0)
 
-    if callback_query.data == "skip":
+    if message.text == "⏭️ Пропустить":
         await state.update_data(position_index=position_index + 1)
-        await run_positions(callback_query.message.chat.id, step_num, state)
+        await run_positions(message.chat.id, step_num, state)
 
-    elif callback_query.data == "stop":
+    elif message.text == "⛔ Завершить":
         await state.finish()
-        await callback_query.message.answer("Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=main_keyboard)
+        await message.answer("Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=get_main_keyboard())
 
-    elif callback_query.data == "back":
+    elif message.text == "↩️ Назад на 2 шага":
         target_step = max(1, step_num - 2)
-        await callback_query.message.answer(f"Ты вернулся(ась) к шагу {target_step} ☀️", reply_markup=main_keyboard)
+        await message.answer(f"Ты вернулся(ась) к шагу {target_step} ☀️", reply_markup=get_main_keyboard())
         await state.finish()
 
-    elif callback_query.data == "menu":
-        await callback_query.message.answer("📋 Выбери шаг", reply_markup=main_keyboard)
+    elif message.text == "📋 Вернуться к шагам":
+        await message.answer("📋 Выбери шаг", reply_markup=get_main_keyboard())
         await state.finish()
 
 @dp.message_handler(lambda message: message.text == "ℹ️ Инфо")
