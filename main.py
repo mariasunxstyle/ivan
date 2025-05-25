@@ -46,15 +46,12 @@ control_keyboard.add(types.KeyboardButton("⏭️ Пропустить"))
 control_keyboard.add(types.KeyboardButton("⛔ Завершить"))
 control_keyboard.add(types.KeyboardButton("↩️ Назад на 2 шага"))
 control_keyboard.add(types.KeyboardButton("📋 Вернуться к шагам"))
-)
 
 control_keyboard_full = ReplyKeyboardMarkup(resize_keyboard=True)
-control_keyboard_full.add(
-    types.KeyboardButton("▶️ Продолжить"),
-    types.KeyboardButton("📋 Вернуться к шагам"),
-    types.KeyboardButton("↩️ Назад на 2 шага"),
-    types.KeyboardButton("⛔ Завершить")
-)
+control_keyboard_full.add(types.KeyboardButton("▶️ Продолжить"))
+control_keyboard_full.add(types.KeyboardButton("📋 Вернуться к шагам"))
+control_keyboard_full.add(types.KeyboardButton("↩️ Назад на 2 шага"))
+control_keyboard_full.add(types.KeyboardButton("⛔ Завершить"))
 
 end_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
 end_keyboard.add(
