@@ -178,6 +178,12 @@ async def end_session(message: types.Message):
 @dp.message_handler(lambda m: m.text == "▶️ Продолжить")
 async def continue_step(message: types.Message):
     user_id = message.chat.id
+    state = user_state.get(user_id)
+    if not state:
+        return
+    state["step"] += 1
+    state["position"] = 0
+    await bot.send_message(user_id, f"Шаг {state['step']}")
     await start_position(user_id)
 
 @dp.message_handler(lambda m: m.text.startswith("↩️"))
