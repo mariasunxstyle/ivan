@@ -27,18 +27,18 @@ DURATIONS_MIN = [
 ]
 
 def format_duration(mins):
-    return f"{int(mins)} мин" if mins == int(mins) else f"{int(mins)} мин {int((mins - int(mins))*60)} сек"
+    return f"{int(mins)} мин" if mins == int(mins) else f"{int(mins)} мин {int((mins - int(mins)) * 60)} сек"
 
 steps_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
 step_buttons = []
 for i, row in enumerate(DURATIONS_MIN):
-    total = int(sum(row))
-    h = total // 60
-    m = total % 60
-    label = f"Шаг {i+1} ({f'{h} ч ' if h else ''}{m} мин)"
+    total = sum(row)
+    h = int(total // 60)
+    m = int(total % 60)
+    label = f"Шаг {i + 1} ({f'{h} ч ' if h else ''}{m} мин)"
     step_buttons.append(KeyboardButton(label))
 for i in range(0, len(step_buttons), 4):
-    steps_keyboard.add(*step_buttons[i:i+4])
+    steps_keyboard.add(*step_buttons[i:i + 4])
 steps_keyboard.add(KeyboardButton("ℹ️ Инфо"))
 
 def get_control_keyboard(step):
@@ -103,10 +103,9 @@ INFO_TEXT = """ℹ️ Инфо
 
 Если есть вопросы — пиши: @sunxbeach_director"""
 
-STEP_COMPLETED = "Шаг завершён. Выбирай ▶️ Продолжить или отдохни ☀️.\nЕсли был перерыв — вернись на 2 шага назад."
-
 user_state = {}
 tasks = {}
+step_completion_shown = set()
 
 @dp.message_handler(commands=['start'])
 async def send_welcome(msg: types.Message):
@@ -121,6 +120,7 @@ async def info(msg: types.Message):
 async def handle_step(msg: types.Message):
     step = int(msg.text.split()[1])
     user_state[msg.chat.id] = {"step": step, "position": 0}
+    step_completion_shown.discard(msg.chat.id)
     await start_position(msg.chat.id)
 
 async def start_position(uid):
@@ -141,8 +141,14 @@ async def start_position(uid):
     except IndexError:
         if step == 12:
             await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
-        else:
-            await bot.send_message(uid, STEP_COMPLETED, reply_markup=get_continue_keyboard(step))
+        elif uid not in step_completion_shown:
+            step_completion_shown.add(uid)
+            message = "Шаг завершён. Выбирай ▶️ Продолжить или отдохни ☀️."
+            if step <= 2:
+                message += "\nЕсли был перерыв — вернись на шаг 1."
+            else:
+                message += "\nЕсли был перерыв — вернись на 2 шага назад."
+            await bot.send_message(uid, message, reply_markup=get_continue_keyboard(step))
 
 async def timer(uid, seconds):
     start = time.monotonic()
@@ -166,6 +172,7 @@ async def end(msg: types.Message):
     t = tasks.pop(uid, None)
     if t: t.cancel()
     user_state[uid] = {"last_step": user_state.get(uid, {}).get("step", 1)}
+    step_completion_shown.discard(uid)
     await bot.send_message(uid, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
 
 @dp.message_handler(lambda m: m.text.startswith("↩️"))
@@ -179,6 +186,7 @@ async def back(msg: types.Message):
         step = state["step"]
         state["step"] = 1 if step <= 2 else step - 2
         state["position"] = 0
+    step_completion_shown.discard(uid)
     await bot.send_message(uid, f"Шаг {user_state[uid]['step']}")
     await start_position(uid)
 
@@ -188,6 +196,7 @@ async def menu(msg: types.Message):
     t = tasks.pop(uid, None)
     if t: t.cancel()
     user_state.pop(uid, None)
+    step_completion_shown.discard(uid)
     await msg.answer("Выбери шаг:", reply_markup=steps_keyboard)
 
 @dp.message_handler(lambda m: m.text == "▶️ Продолжить")
@@ -198,6 +207,7 @@ async def continue_step(msg: types.Message):
         return
     state["step"] += 1
     state["position"] = 0
+    step_completion_shown.discard(uid)
     await bot.send_message(uid, f"Шаг {state['step']}")
     await start_position(uid)
 
