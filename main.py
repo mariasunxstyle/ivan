@@ -152,10 +152,38 @@ async def start_position(uid):
 
 async def timer(uid, seconds):
     start = time.monotonic()
+    message = await bot.send_message(uid, f"⏳ Осталось: {seconds // 60} мин\n▓░░░░░░░░░")
+    bar_states = [
+        "▓░░░░░░░░░", "▓▓░░░░░░░░", "▓▓▓░░░░░░░", "▓▓▓▓░░░░░░",
+        "▓▓▓▓▓░░░░░", "▓▓▓▓▓▓░░░░", "▓▓▓▓▓▓▓░░░", "▓▓▓▓▓▓▓▓░░",
+        "▓▓▓▓▓▓▓▓▓░", "▓▓▓▓▓▓▓▓▓▓"
+    ]
+    last_state = ""
+
     while True:
-        if time.monotonic() - start >= seconds:
+        elapsed = int(time.monotonic() - start)
+        remaining = seconds - elapsed
+        if remaining <= 0:
             break
-        await asyncio.sleep(0.1)
+
+        percent_done = elapsed / seconds
+        index = min(int(percent_done * 10), 9)
+        bar = bar_states[index]
+
+        minutes = remaining // 60
+        seconds_remain = remaining % 60
+        time_label = f"{minutes} мин" if minutes > 0 else f"{seconds_remain} сек"
+        text = f"⏳ Осталось: {time_label}\n{bar}"
+
+        if text != last_state:
+            try:
+                await bot.edit_message_text(text, chat_id=uid, message_id=message.message_id)
+            except:
+                pass
+            last_state = text
+
+        await asyncio.sleep(5 if remaining > 60 else 10)
+
     if uid in user_state:
         await start_position(uid)
 
