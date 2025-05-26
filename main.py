@@ -107,7 +107,19 @@ async def start_position(uid):
 
 import time
 
+
+import time
+
 async def timer(uid, seconds):
+    start = time.monotonic()
+    while True:
+        elapsed = time.monotonic() - start
+        if elapsed >= seconds:
+            break
+        await asyncio.sleep(0.1)
+    if uid in user_state:
+        await start_position(uid)
+
     start = time.monotonic()
     while True:
         if time.monotonic() - start >= seconds:
@@ -167,3 +179,20 @@ async def continue_step(msg: types.Message):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     executor.start_polling(dp, skip_updates=True)
+
+
+
+steps_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
+step_buttons = []
+
+for i, row in enumerate(DURATIONS_MIN):
+    total = int(sum(row))
+    h = total // 60
+    m = total % 60
+    label = f"Шаг {i+1} ({f'{h} ч ' if h else ''}{m} мин)"
+    step_buttons.append(KeyboardButton(label))
+
+for i in range(0, len(step_buttons), 4):
+    steps_keyboard.add(*step_buttons[i:i+4])
+
+steps_keyboard.add(KeyboardButton("ℹ️ Инфо"))
