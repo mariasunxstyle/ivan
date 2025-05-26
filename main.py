@@ -1,4 +1,4 @@
-# main.py на основе рабочей схемы без FSM
+# main.py — финальная версия с проверками на шаг 12, таймингами, кнопками и чистыми сообщениями
 import asyncio
 import logging
 import os
@@ -31,20 +31,11 @@ DURATIONS_MIN = [
     [45.0, 45.0, 30.0, 30.0, 40.0],
 ]
 
-# Форматирование времени
-def format_duration(min_float):
-    minutes = int(min_float)
-    seconds = int((min_float - minutes) * 60)
-    if seconds == 0:
-        return f"{minutes} мин"
-    else:
-        return f"{minutes} мин {seconds} сек"
-
-# Кнопки
+# ======= КНОПКИ =======
 control_keyboard_continue = ReplyKeyboardMarkup(resize_keyboard=True)
 control_keyboard_continue.add(types.KeyboardButton("▶️ Продолжить"))
 control_keyboard_continue.add(types.KeyboardButton("📋 Вернуться к шагам"))
-control_keyboard_continue.add(types.KeyboardButton("↩️ Назад на 2 шага \(после перерыва\)"))
+control_keyboard_continue.add(types.KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
 control_keyboard_continue.add(types.KeyboardButton("⛔ Завершить"))
 
 control_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -74,8 +65,9 @@ for i, row in enumerate(DURATIONS_MIN):
     step_buttons.append(types.KeyboardButton(label))
 for i in range(0, len(step_buttons), 4):
     steps_keyboard.add(*step_buttons[i:i+4])
+steps_keyboard.add(types.KeyboardButton("ℹ️ Инфо"))
 
-# Сообщения
+# ======= СООБЩЕНИЯ =======
 GREETING = """Привет, солнце! ☀️
 Ты в таймере по методу суперкомпенсации.
 Кожа адаптируется к солнцу постепенно — и загар становится ровным, глубоким и без ожогов.
@@ -87,6 +79,7 @@ GREETING = """Привет, солнце! ☀️
 Каждый новый день и после перерыва — возвращайся на 2 шага назад.
 
 Хочешь подробности — жми /info."""
+
 INFO_TEXT = """ℹ️ Инфо
 Метод суперкомпенсации — научно обоснованный способ безопасного загара.
 Ты проходишь 12 шагов — каждый с таймингом и сменой позиций.
@@ -104,15 +97,13 @@ INFO_TEXT = """ℹ️ Инфо
 
 Если есть вопросы — пиши: @sunxbeach_director"""
 
-STEP_COMPLETED = "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме."
-SESSION_DONE = "Сеанс завершён. Можешь вернуться позже и начать заново ☀️"
-BACK_LIMIT = None
+STEP_COMPLETED = "Шаг завершён. Выбирай следующий или отдохни ☀️\nЕсли был перерыв — вернись на 2 шага назад."
 
-# СОСТОЯНИЕ
+# ======= СОСТОЯНИЕ =======
 user_state = {}
 tasks = {}
 
-# ХЭНДЛЕРЫ
+# ======= ЛОГИКА =======
 @dp.message_handler(commands=['start'])
 async def send_welcome(message: types.Message):
     await message.answer(GREETING, reply_markup=steps_keyboard)
@@ -137,20 +128,27 @@ async def start_position(user_id):
     pos = state["position"]
     if step > 12:
         await bot.send_message(
-    user_id,
-    "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.",
-    reply_markup=control_keyboard_full
-)
+            user_id,
+            "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.",
+            reply_markup=control_keyboard_full
+        )
         user_state.pop(user_id, None)
         return
     try:
         name = POSITIONS[pos]
-        duration = DURATIONS_MIN[step-1][pos]
+        duration = DURATIONS_MIN[step - 1][pos]
         await bot.send_message(user_id, f"{name} — {format_duration(duration)}", reply_markup=control_keyboard)
         state["position"] += 1
         tasks[user_id] = asyncio.create_task(timer(user_id, duration))
     except IndexError:
-        await bot.send_message(user_id, STEP_COMPLETED, reply_markup=control_keyboard_continue)
+        if step == 12:
+            await bot.send_message(
+                user_id,
+                "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.",
+                reply_markup=control_keyboard_full
+            )
+        else:
+            await bot.send_message(user_id, STEP_COMPLETED, reply_markup=control_keyboard_continue)
 
 async def timer(user_id, minutes):
     await asyncio.sleep(minutes * 60)
@@ -160,10 +158,20 @@ async def timer(user_id, minutes):
 async def skip(message: types.Message):
     user_id = message.chat.id
     task = tasks.pop(user_id, None)
-    if task: task.cancel()
+    if task:
+        task.cancel()
     await start_position(user_id)
 
-@dp.message_handler(lambda m: m.text.startswith("↩️ Назад"))
+@dp.message_handler(lambda m: m.text == "⛔ Завершить")
+async def end_session(message: types.Message):
+    user_id = message.chat.id
+    task = tasks.pop(user_id, None)
+    if task:
+        task.cancel()
+    await bot.send_message(user_id, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
+    user_state.pop(user_id, None)
+
+@dp.message_handler(lambda m: m.text.startswith("↩️"))
 async def go_back(message: types.Message):
     user_id = message.chat.id
     state = user_state.get(user_id)
@@ -177,19 +185,12 @@ async def go_back(message: types.Message):
     await bot.send_message(user_id, f"Шаг {state['step']}")
     await start_position(user_id)
 
-@dp.message_handler(lambda m: m.text == "⛔ Завершить")
-async def end_session(message: types.Message):
-    user_id = message.chat.id
-    task = tasks.pop(user_id, None)
-    if task: task.cancel()
-    await bot.send_message(user_id, SESSION_DONE, reply_markup=end_keyboard)
-    user_state.pop(user_id, None)
-
 @dp.message_handler(lambda m: m.text == "📋 Вернуться к шагам")
 async def back_to_steps(message: types.Message):
     user_id = message.chat.id
     task = tasks.pop(user_id, None)
-    if task: task.cancel()
+    if task:
+        task.cancel()
     user_state.pop(user_id, None)
     await message.answer("Выбери шаг:", reply_markup=steps_keyboard)
 
