@@ -125,7 +125,7 @@ async def start_position(uid):
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step-1][pos]
-        await bot.send_message(uid, f"{name} — {format_duration(dur)}", reply_markup=types.ReplyKeyboardRemove())
+        await bot.send_message(uid, f"{name} — {format_duration(dur)}", reply_markup=control_keyboard)
         state["position"] += 1
         tasks[uid] = asyncio.create_task(timer(uid, int(dur * 60)))
     except IndexError:
@@ -156,7 +156,7 @@ async def end(msg: types.Message):
     t = tasks.pop(uid, None)
     if t: t.cancel()
     user_state[uid] = {"last_step": user_state.get(uid, {}).get("step", 1)}
-    await bot.send_message(uid, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=control_keyboard_full)
+    await bot.send_message(uid, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
 
 @dp.message_handler(lambda m: m.text.startswith("↩️"))
 async def back(msg: types.Message):
@@ -194,3 +194,4 @@ async def continue_step(msg: types.Message):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     executor.start_polling(dp, skip_updates=True)
+
