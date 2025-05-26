@@ -136,8 +136,12 @@ async def start_position(user_id):
     step = state["step"]
     pos = state["position"]
     if step > 12:
-        await bot.send_message(user_id, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️
-Кожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
+        await bot.send_message(
+        user_id,
+        "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️
+Кожа адаптировалась. Теперь можно поддерживать загар в своём ритме.",
+        reply_markup=control_keyboard_full
+    )
         user_state.pop(user_id, None)
         return
     try:
