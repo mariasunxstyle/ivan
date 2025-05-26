@@ -1,4 +1,4 @@
-# main.py — финальная версия с проверками на шаг 12, таймингами, кнопками и чистыми сообщениями
+# Финальный main.py с полностью рабочими кнопками управления внутри основного файла
 import asyncio
 import logging
 import os
@@ -14,7 +14,6 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-# ======= ДАННЫЕ =======
 POSITIONS = ["Лицом вверх", "На животе", "Левый бок", "Правый бок", "В тени"]
 DURATIONS_MIN = [
     [1.5, 1.5, 1.0, 1.0, 3.0],
@@ -31,28 +30,32 @@ DURATIONS_MIN = [
     [45.0, 45.0, 30.0, 30.0, 40.0],
 ]
 
-# ======= КНОПКИ =======
+def format_duration(min_float):
+    minutes = int(min_float)
+    seconds = int((min_float - minutes) * 60)
+    return f"{minutes} мин" if seconds == 0 else f"{minutes} мин {seconds} сек"
+
 control_keyboard_continue = ReplyKeyboardMarkup(resize_keyboard=True)
-control_keyboard_continue.add(types.KeyboardButton("▶️ Продолжить"))
-control_keyboard_continue.add(types.KeyboardButton("📋 Вернуться к шагам"))
-control_keyboard_continue.add(types.KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
-control_keyboard_continue.add(types.KeyboardButton("⛔ Завершить"))
+control_keyboard_continue.add(KeyboardButton("▶️ Продолжить"))
+control_keyboard_continue.add(KeyboardButton("📋 Вернуться к шагам"))
+control_keyboard_continue.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
+control_keyboard_continue.add(KeyboardButton("⛔ Завершить"))
 
 control_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-control_keyboard.add(types.KeyboardButton("⏭️ Пропустить"))
-control_keyboard.add(types.KeyboardButton("⛔ Завершить"))
-control_keyboard.add(types.KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
-control_keyboard.add(types.KeyboardButton("📋 Вернуться к шагам"))
+control_keyboard.add(KeyboardButton("⏭️ Пропустить"))
+control_keyboard.add(KeyboardButton("⛔ Завершить"))
+control_keyboard.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
+control_keyboard.add(KeyboardButton("📋 Вернуться к шагам"))
 
 control_keyboard_full = ReplyKeyboardMarkup(resize_keyboard=True)
-control_keyboard_full.add(types.KeyboardButton("📋 Вернуться к шагам"))
-control_keyboard_full.add(types.KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
-control_keyboard_full.add(types.KeyboardButton("⛔ Завершить"))
+control_keyboard_full.add(KeyboardButton("📋 Вернуться к шагам"))
+control_keyboard_full.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
+control_keyboard_full.add(KeyboardButton("⛔ Завершить"))
 
 end_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
 end_keyboard.add(
-    types.KeyboardButton("📋 Вернуться к шагам"),
-    types.KeyboardButton("↩️ Назад на 2 шага (после перерыва)")
+    KeyboardButton("📋 Вернуться к шагам"),
+    KeyboardButton("↩️ Назад на 2 шага (после перерыва)")
 )
 
 steps_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
@@ -62,12 +65,11 @@ for i, row in enumerate(DURATIONS_MIN):
     h = min_total // 60
     m = min_total % 60
     label = f"Шаг {i+1} ({f'{h} ч ' if h else ''}{m} мин)"
-    step_buttons.append(types.KeyboardButton(label))
+    step_buttons.append(KeyboardButton(label))
 for i in range(0, len(step_buttons), 4):
     steps_keyboard.add(*step_buttons[i:i+4])
-steps_keyboard.add(types.KeyboardButton("ℹ️ Инфо"))
+steps_keyboard.add(KeyboardButton("ℹ️ Инфо"))
 
-# ======= СООБЩЕНИЯ =======
 GREETING = """Привет, солнце! ☀️
 Ты в таймере по методу суперкомпенсации.
 Кожа адаптируется к солнцу постепенно — и загар становится ровным, глубоким и без ожогов.
@@ -99,11 +101,9 @@ INFO_TEXT = """ℹ️ Инфо
 
 STEP_COMPLETED = "Шаг завершён. Выбирай следующий или отдохни ☀️\nЕсли был перерыв — вернись на 2 шага назад."
 
-# ======= СОСТОЯНИЕ =======
 user_state = {}
 tasks = {}
 
-# ======= ЛОГИКА =======
 @dp.message_handler(commands=['start'])
 async def send_welcome(message: types.Message):
     await message.answer(GREETING, reply_markup=steps_keyboard)
