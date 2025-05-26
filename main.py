@@ -1,4 +1,4 @@
-# Финальный main.py с полностью рабочими кнопками управления внутри основного файла
+
 import asyncio
 import logging
 import os
@@ -170,6 +170,11 @@ async def end_session(message: types.Message):
         task.cancel()
     await bot.send_message(user_id, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
     user_state.pop(user_id, None)
+
+@dp.message_handler(lambda m: m.text == "▶️ Продолжить")
+async def continue_step(message: types.Message):
+    user_id = message.chat.id
+    await start_position(user_id)
 
 @dp.message_handler(lambda m: m.text.startswith("↩️"))
 async def go_back(message: types.Message):
