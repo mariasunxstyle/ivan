@@ -41,17 +41,27 @@ for i in range(0, len(step_buttons), 4):
     steps_keyboard.add(*step_buttons[i:i+4])
 steps_keyboard.add(KeyboardButton("ℹ️ Инфо"))
 
-control_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-control_keyboard.add(KeyboardButton("⏭️ Пропустить"))
-control_keyboard.add(KeyboardButton("⛔ Завершить"))
-control_keyboard.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
-control_keyboard.add(KeyboardButton("📋 Вернуться к шагам"))
+def get_control_keyboard(step):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(KeyboardButton("⏭️ Пропустить"))
+    kb.add(KeyboardButton("⛔ Завершить"))
+    if step <= 2:
+        kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
+    else:
+        kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
+    kb.add(KeyboardButton("📋 Вернуться к шагам"))
+    return kb
 
-control_keyboard_continue = ReplyKeyboardMarkup(resize_keyboard=True)
-control_keyboard_continue.add(KeyboardButton("▶️ Продолжить"))
-control_keyboard_continue.add(KeyboardButton("📋 Вернуться к шагам"))
-control_keyboard_continue.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
-control_keyboard_continue.add(KeyboardButton("⛔ Завершить"))
+def get_continue_keyboard(step):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(KeyboardButton("▶️ Продолжить"))
+    kb.add(KeyboardButton("📋 Вернуться к шагам"))
+    if step <= 2:
+        kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
+    else:
+        kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
+    kb.add(KeyboardButton("⛔ Завершить"))
+    return kb
 
 control_keyboard_full = ReplyKeyboardMarkup(resize_keyboard=True)
 control_keyboard_full.add(KeyboardButton("📋 Вернуться к шагам"))
@@ -125,14 +135,14 @@ async def start_position(uid):
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step-1][pos]
-        await bot.send_message(uid, f"{name} — {format_duration(dur)}", reply_markup=control_keyboard)
+        await bot.send_message(uid, f"{name} — {format_duration(dur)}", reply_markup=get_control_keyboard(step))
         state["position"] += 1
         tasks[uid] = asyncio.create_task(timer(uid, int(dur * 60)))
     except IndexError:
         if step == 12:
             await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
         else:
-            await bot.send_message(uid, STEP_COMPLETED, reply_markup=control_keyboard_continue)
+            await bot.send_message(uid, STEP_COMPLETED, reply_markup=get_continue_keyboard(step))
 
 async def timer(uid, seconds):
     start = time.monotonic()
@@ -164,7 +174,7 @@ async def back(msg: types.Message):
     state = user_state.get(uid)
     if not state:
         last = user_state.get(uid, {}).get("last_step", 1)
-        user_state[uid] = {"step": 1 if last <= 2 else last - 2, "position": 0}
+        user_state[uid] = {"step": 1, "position": 0} if last <= 2 else {"step": last - 2, "position": 0}
     else:
         step = state["step"]
         state["step"] = 1 if step <= 2 else step - 2
