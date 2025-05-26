@@ -41,17 +41,22 @@ for i in range(0, len(step_buttons), 4):
     steps_keyboard.add(*step_buttons[i:i+4])
 steps_keyboard.add(KeyboardButton("ℹ️ Инфо"))
 
+def get_control_keyboard_continue(step):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(KeyboardButton("▶️ Продолжить"))
+    kb.add(KeyboardButton("📋 Вернуться к шагам"))
+    if step in [1, 2]:
+        kb.add(KeyboardButton("↩️ Вернуться на шаг 1 (после перерыва)"))
+    else:
+        kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
+    kb.add(KeyboardButton("⛔ Завершить"))
+    return kb
+
 control_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
 control_keyboard.add(KeyboardButton("⏭️ Пропустить"))
 control_keyboard.add(KeyboardButton("⛔ Завершить"))
 control_keyboard.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
 control_keyboard.add(KeyboardButton("📋 Вернуться к шагам"))
-
-control_keyboard_continue = ReplyKeyboardMarkup(resize_keyboard=True)
-control_keyboard_continue.add(KeyboardButton("▶️ Продолжить"))
-control_keyboard_continue.add(KeyboardButton("📋 Вернуться к шагам"))
-control_keyboard_continue.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
-control_keyboard_continue.add(KeyboardButton("⛔ Завершить"))
 
 control_keyboard_full = ReplyKeyboardMarkup(resize_keyboard=True)
 control_keyboard_full.add(KeyboardButton("📋 Вернуться к шагам"))
@@ -93,7 +98,8 @@ INFO_TEXT = """ℹ️ Инфо
 
 Если есть вопросы — пиши: @sunxbeach_director"""
 
-STEP_COMPLETED = "Шаг завершён. Выбирай ▶️ Продолжить или отдохни ☀️.\nЕсли был перерыв — вернись на 2 шага назад."
+STEP_COMPLETED = "Шаг завершён. Выбирай ▶️ Продолжить или отдохни ☀️.
+Если был перерыв — вернись на 2 шага назад."
 
 user_state = {}
 tasks = {}
@@ -120,7 +126,8 @@ async def start_position(uid):
     step = state["step"]
     pos = state["position"]
     if step > 12:
-        await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
+        await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️
+Кожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
         return
     try:
         name = POSITIONS[pos]
@@ -130,9 +137,10 @@ async def start_position(uid):
         tasks[uid] = asyncio.create_task(timer(uid, int(dur * 60)))
     except IndexError:
         if step == 12:
-            await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
+            await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️
+Кожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
         else:
-            await bot.send_message(uid, STEP_COMPLETED, reply_markup=control_keyboard_continue)
+            await bot.send_message(uid, STEP_COMPLETED, reply_markup=get_control_keyboard_continue(step))
 
 async def timer(uid, seconds):
     start = time.monotonic()
@@ -194,4 +202,3 @@ async def continue_step(msg: types.Message):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     executor.start_polling(dp, skip_updates=True)
-
