@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 import os
@@ -151,8 +150,13 @@ async def start_position(user_id):
             await bot.send_message(user_id, STEP_COMPLETED, reply_markup=control_keyboard_continue)
 
 async def timer(user_id, minutes):
-    await asyncio.sleep(minutes * 60)
-    await start_position(user_id)
+    await asyncio.sleep(int(minutes * 60))
+    state = user_state.get(user_id)
+    if not state:
+        return
+    if user_id in tasks:
+        tasks.pop(user_id)
+        await start_position(user_id)
 
 @dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
 async def skip(message: types.Message):
