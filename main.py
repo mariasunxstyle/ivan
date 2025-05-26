@@ -30,6 +30,16 @@ def format_duration(mins):
     return f"{int(mins)} мин" if mins == int(mins) else f"{int(mins)} мин {int((mins - int(mins))*60)} сек"
 
 steps_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
+step_buttons = []
+for i, row in enumerate(DURATIONS_MIN):
+    total = int(sum(row))
+    h = total // 60
+    m = total % 60
+    label = f"Шаг {i+1} ({f'{h} ч ' if h else ''}{m} мин)"
+    step_buttons.append(KeyboardButton(label))
+for i in range(0, len(step_buttons), 4):
+    steps_keyboard.add(*step_buttons[i:i+4])
+steps_keyboard.add(KeyboardButton("ℹ️ Инфо"))
 for i, row in enumerate(DURATIONS_MIN):
     total = sum(row)
     label = f"Шаг {i+1} ({int(total//60)} ч {int(total%60)} мин)" if total >= 60 else f"Шаг {i+1} ({int(total)} мин)"
