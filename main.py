@@ -152,37 +152,38 @@ async def start_position(uid):
 
 async def timer(uid, seconds):
     start = time.monotonic()
-    message = await bot.send_message(uid, f"⏳ Осталось: {seconds // 60} мин\n▓░░░░░░░░░")
     bar_states = [
-        "▓░░░░░░░░░", "▓▓░░░░░░░░", "▓▓▓░░░░░░░", "▓▓▓▓░░░░░░",
-        "▓▓▓▓▓░░░░░", "▓▓▓▓▓▓░░░░", "▓▓▓▓▓▓▓░░░", "▓▓▓▓▓▓▓▓░░",
-        "▓▓▓▓▓▓▓▓▓░", "▓▓▓▓▓▓▓▓▓▓"
+        "☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️☀️🌑🌑🌑🌑🌑🌑🌑",
+        "☀️☀️☀️☀️🌑🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️☀️🌑🌑🌑🌑",
+        "☀️☀️☀️☀️☀️☀️☀️🌑🌑🌑", "☀️☀️☀️☀️☀️☀️☀️☀️🌑🌑",
+        "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑", "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"
     ]
+
     last_state = ""
+    msg = await bot.send_message(uid, f"⏳ Таймер запущен...\n☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑")
 
     while True:
-        elapsed = int(time.monotonic() - start)
-        remaining = seconds - elapsed
-        if remaining <= 0:
-            break
+        elapsed = time.monotonic() - start
+        remaining = max(0, int(seconds - elapsed))
+        percent_done = min(elapsed / seconds, 1.0)
+        bar_index = min(int(percent_done * 10), 9)
 
-        percent_done = elapsed / seconds
-        index = min(int(percent_done * 10), 9)
-        bar = bar_states[index]
-
+        bar = bar_states[bar_index]
         minutes = remaining // 60
         seconds_remain = remaining % 60
-        time_label = f"{minutes} мин" if minutes > 0 else f"{seconds_remain} сек"
+        time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
         text = f"⏳ Осталось: {time_label}\n{bar}"
 
         if text != last_state:
             try:
-                await bot.edit_message_text(text, chat_id=uid, message_id=message.message_id)
+                await bot.edit_message_text(text, chat_id=uid, message_id=msg.message_id)
             except:
                 pass
             last_state = text
 
-        await asyncio.sleep(5 if remaining > 60 else 10)
+        if remaining <= 0:
+            break
+        await asyncio.sleep(2)
 
     if uid in user_state:
         await start_position(uid)
