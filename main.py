@@ -135,9 +135,9 @@ async def start_position(uid):
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step-1][pos]
-        await bot.send_message(uid, f"{name} — {format_duration(dur)}", reply_markup=get_control_keyboard(step))
+        message = await bot.send_message(uid, f"{name} — {format_duration(dur)}\n⏳ Таймер запущен...")
         state["position"] += 1
-        tasks[uid] = asyncio.create_task(timer(uid, int(dur * 60)))
+        tasks[uid] = asyncio.create_task(timer(uid, int(dur * 60), message))
     except IndexError:
         if step == 12:
             await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
@@ -150,7 +150,7 @@ async def start_position(uid):
                 message += "\nЕсли был перерыв — вернись на 2 шага назад."
             await bot.send_message(uid, message, reply_markup=get_continue_keyboard(step))
 
-async def timer(uid, seconds):
+async def timer(uid, seconds, msg):
     start = time.monotonic()
     bar_states = [
         "☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️☀️🌑🌑🌑🌑🌑🌑🌑",
@@ -158,10 +158,7 @@ async def timer(uid, seconds):
         "☀️☀️☀️☀️☀️☀️☀️🌑🌑🌑", "☀️☀️☀️☀️☀️☀️☀️☀️🌑🌑",
         "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑", "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"
     ]
-
     last_state = ""
-    msg = await bot.send_message(uid, f"⏳ Таймер запущен...\n☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑")
-
     while True:
         elapsed = time.monotonic() - start
         remaining = max(0, int(seconds - elapsed))
@@ -176,7 +173,7 @@ async def timer(uid, seconds):
 
         if text != last_state:
             try:
-                await bot.edit_message_text(text, chat_id=uid, message_id=msg.message_id)
+                await bot.edit_message_text(text=msg.text.split("\n")[0] + "\n" + text, chat_id=uid, message_id=msg.message_id)
             except:
                 pass
             last_state = text
