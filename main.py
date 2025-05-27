@@ -1,4 +1,4 @@
-cio
+import asyncio
 import logging
 import os
 import time
@@ -28,7 +28,8 @@ DURATIONS_MIN = [
 
 def format_duration(mins):
     return f"{int(mins)} мин" if mins == int(mins) else f"{int(mins)} мин {int((mins - int(mins)) * 60)} сек"
-    GREETING = """Привет, солнце! ☀️
+
+GREETING = """Привет, солнце! ☀️
 Ты в таймере по методу суперкомпенсации.
 Кожа адаптируется к солнцу постепенно — и загар получается ровным, глубоким и без ожогов.
 
@@ -57,9 +58,6 @@ INFO_TEXT = """ℹ️ Инфо
 
 Если есть вопросы — пиши: @sunxbeach_director"""
 
-# Далее пойдут: клавиатуры, user_state, tasks, step_completion_shown,
-# обработчики команд, запуск таймера и логика шагов.
-# Хочешь — продолжу прямо сейчас с клавиатур и состояния?
 steps_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
 for i, row in enumerate(DURATIONS_MIN):
     total = sum(row)
@@ -121,7 +119,6 @@ async def handle_step(msg: types.Message):
     step_completion_shown.discard(uid)
     await start_position(uid)
 
-# Продолжу с функцией start_position, таймером и обработчиками кнопок — напиши «продолжить».
 async def start_position(uid):
     state = user_state.get(uid)
     if not state:
