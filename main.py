@@ -135,7 +135,8 @@ async def start_position(uid):
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step-1][pos]
-        text = f"{msg.text.split('\\n')[0]}\n⏳ Осталось: {time_label}\n{bar}"
+        first_line = msg.text.split("\n")[0]
+text = f"{first_line}\n⏳ Осталось: {time_label}\n{bar}"
         state["position"] += 1
         tasks[uid] = asyncio.create_task(timer(uid, int(dur * 60), message))
     except IndexError:
