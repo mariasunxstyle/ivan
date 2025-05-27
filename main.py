@@ -62,10 +62,7 @@ def get_continue_keyboard(step):
 def get_end_keyboard(step):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add(KeyboardButton("📋 Вернуться к шагам"))
-    if step <= 2:
-        kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
-    else:
-        kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
+    kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
     return kb
 
 user_state = {}
@@ -119,27 +116,26 @@ async def start_position(uid):
 
 async def timer(uid, seconds, msg):
     start = time.monotonic()
-    last_seconds = -1
+    last_state = ""
     while True:
         elapsed = time.monotonic() - start
         remaining = max(0, int(seconds - elapsed))
-        if remaining != last_seconds:
-            last_seconds = remaining
-            minutes = remaining // 60
-            seconds_remain = remaining % 60
-            time_str = f"⏳ Осталось: {minutes:02d}:{seconds_remain:02d}"
+        minutes = remaining // 60
+        seconds_remain = remaining % 60
+        time_label = f"⏳ Осталось: {minutes} мин {seconds_remain} сек" if minutes > 0 else f"⏳ Осталось: {seconds_remain} сек"
+        text = f"{msg.text.splitlines()[0]}\n{time_label}"
+
+        if text != last_state:
             try:
-                await bot.edit_message_text(
-                    f"{msg.text.splitlines()[0]}\n{time_str}",
-                    chat_id=uid,
-                    message_id=msg.message_id,
-                    reply_markup=get_control_keyboard(user_state[uid]['step'])
-                )
+                await bot.edit_message_text(text=text, chat_id=uid, message_id=msg.message_id)
             except:
                 pass
+            last_state = text
+
         if remaining <= 0:
             break
         await asyncio.sleep(1)
+
     if uid in user_state:
         await start_position(uid)
 
