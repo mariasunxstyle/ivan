@@ -135,8 +135,7 @@ async def start_position(uid):
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step-1][pos]
-        first_line = msg.text.split("\n")[0]
-text = f"{first_line}\n⏳ Осталось: {time_label}\n{bar}"
+        message = await bot.send_message(uid, f"{name} — {format_duration(dur)}\n⏳ Осталось: {format_duration(dur)}\n☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑")
         state["position"] += 1
         tasks[uid] = asyncio.create_task(timer(uid, int(dur * 60), message))
     except IndexError:
@@ -241,3 +240,4 @@ async def continue_step(msg: types.Message):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     executor.start_polling(dp, skip_updates=True)
+
