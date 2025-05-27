@@ -137,9 +137,7 @@ async def start_position(uid):
         dur = DURATIONS_MIN[step-1][pos]
         message = await bot.send_message(
     uid,
-    f"{name} — {format_duration(dur)}\n⏳ Осталось: {format_duration(dur)}\n⬤○○○○○○○○○",
-    reply_markup=get_control_keyboard(step)
-)
+ text = f"⏳ Осталось: {time_label}\n{bar}"
 
         state["position"] += 1
         tasks[uid] = asyncio.create_task(timer(uid, int(dur * 60), message))
@@ -178,11 +176,15 @@ async def timer(uid, seconds, msg):
 
         if text != last_state:
             try:
-                await bot.edit_message_text(
-                    text=text,
-                    chat_id=uid,
-                    message_id=msg.message_id
-                )
+                try:
+    await bot.edit_message_text(
+        text=f"{msg.text.splitlines()[0]}\n{text}",
+        chat_id=uid,
+        message_id=msg.message_id
+    )
+except:
+    pass
+
             except:
                 pass
             last_state = text
@@ -193,7 +195,16 @@ async def timer(uid, seconds, msg):
 
     if uid in user_state:
         await start_position(uid)
-
+        
+@dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
+async def skip(msg: types.Message):
+    uid = msg.chat.id
+    task = tasks.pop(uid, None)
+    if task:
+        task.cancel()
+    state = user_state.get(uid)
+    if state:
+        await start_position(uid)
 
 @dp.message_handler(lambda m: m.text == "⛔ Завершить")
 async def end(msg: types.Message):
@@ -205,7 +216,7 @@ async def end(msg: types.Message):
     if state:
         user_state[uid]["last_step"] = state.get("step", 1)
     else:
-        user_state[uid] = {"last_step": 1}
+        user_state[uid] = {"step": 1, "position": 0, "last_step": 1}
     step_completion_shown.discard(uid)
     await bot.send_message(uid, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
 
