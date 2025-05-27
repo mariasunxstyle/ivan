@@ -1,38 +1,4 @@
-import asyncio
-import logging
-import os
-import time
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-from aiogram.utils import executor
-
-API_TOKEN = os.getenv("TOKEN")
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
-
-POSITIONS = ["Лицом вверх", "На животе", "Левый бок", "Правый бок", "В тени"]
-DURATIONS_MIN = [
-    [1.5, 1.5, 1.0, 1.0, 3.0],
-    [2.0, 2.0, 1.0, 1.0, 3.0],
-    [3.0, 3.0, 1.5, 1.5, 5.0],
-    [5.0, 5.0, 2.5, 2.5, 5.0],
-    [7.0, 7.0, 3.0, 3.0, 7.0],
-    [9.0, 9.0, 5.0, 5.0, 10.0],
-    [12.0, 12.0, 7.0, 7.0, 10.0],
-    [15.0, 15.0, 10.0, 10.0, 10.0],
-    [20.0, 20.0, 15.0, 15.0, 15.0],
-    [25.0, 25.0, 20.0, 20.0, 20.0],
-    [35.0, 35.0, 25.0, 25.0, 30.0],
-    [45.0, 45.0, 30.0, 30.0, 40.0]
-]
-
-def format_duration(mins):
-    return f"{int(mins)} мин" if mins == int(mins) else f"{int(mins)} мин {int((mins - int(mins)) * 60)} сек"
-
-steps_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
-for i, row in enumerate(DURATIONS_MIN):
-    total = sum(row)
-    h = int(total // 60)
+h = int(total // 60)
     m = int(total % 60)
     label = f"Шаг {i + 1} ({f'{h} ч ' if h else ''}{m} мин)"
     steps_keyboard.insert(KeyboardButton(label))
@@ -79,23 +45,7 @@ async def send_welcome(msg: types.Message):
 @dp.message_handler(commands=['info'])
 @dp.message_handler(lambda m: m.text == "ℹ️ Инфо")
 async def info(msg: types.Message):
-    await msg.answer("""ℹ️ Инфо
-Метод суперкомпенсации — научно обоснованный способ безопасного загара.
-Ты проходишь 12 шагов — каждый с таймингом и сменой позиций.
-
-Как использовать:
-1. Начни с шага 1
-2. Включи таймер и следуй позициям
-3. Каждый новый день и после любого перерыва — возвращайся на 2 шага назад
-4. После завершения всех 12 шагов — можешь поддерживать загар в комфортном ритме
-
-Рекомендуем загорать с 7:00 до 11:00 и после 17:00 — в это время солнце мягкое,
-и при отсутствии противопоказаний можно загорать без SPF.
-С 11:00 до 17:00 — солнце более агрессивное. Если остаёшься на улице —
-надевай одежду или используй SPF.
-
-Если есть вопросы — пиши: @sunxbeach_director""")
-
+    await msg.answer("ℹ️ Инфо\nМетод суперкомпенсации — научно обоснованный способ безопасного загара.\nТы проходишь 12 шагов — каждый с таймингом и сменой позиций.\n\nКак использовать:\n1. Начни с шага 1\n2. Включи таймер и следуй позициям\n3. Каждый новый день и после любого перерыва — возвращайся на 2 шага назад\n4. После завершения всех 12 шагов — можешь поддерживать загар в комфортном ритме\n\nРекомендуем загорать с 7:00 до 11:00 и после 17:00 — в это время солнце мягкое,\nи при отсутствии противопоказаний можно загорать без SPF.\nС 11:00 до 17:00 — солнце более агрессивное. Если остаёшься на улице —\nнадевай одежду или используй SPF.\n\nЕсли есть вопросы — пиши: @sunxbeach_director")
 @dp.message_handler(lambda m: m.text.startswith("Шаг "))
 async def handle_step(msg: types.Message):
     uid = msg.chat.id
@@ -105,15 +55,16 @@ async def handle_step(msg: types.Message):
     user_state[uid] = {"step": step, "position": 0}
     step_completion_shown.discard(uid)
     await start_position(uid)
+
 async def start_position(uid):
     state = user_state.get(uid)
     if not state:
         return
     step = state["step"]
-    pos = state["position"]
     if step > 12:
         await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=get_end_keyboard(step))
         return
+    pos = state["position"]
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step-1][pos]
@@ -134,22 +85,26 @@ async def start_position(uid):
 
 async def timer(uid, seconds, msg):
     start = time.monotonic()
-    last_text = ""
+    last_seconds = -1
     while True:
         elapsed = time.monotonic() - start
         remaining = max(0, int(seconds - elapsed))
-        if remaining <= 0:
-            break
-        minutes = remaining // 60
-        seconds_remain = remaining % 60
-        time_str = f"⏳ Осталось: {minutes:02d}:{seconds_remain:02d}"
-        new_text = f"{msg.text.splitlines()[0]}\n{time_str}"
-        if new_text != last_text:
+        if remaining != last_seconds:
+            last_seconds = remaining
+            minutes = remaining // 60
+            seconds_remain = remaining % 60
+            time_str = f"⏳ Осталось: {minutes:02d}:{seconds_remain:02d}"
             try:
-                await bot.edit_message_text(new_text, chat_id=uid, message_id=msg.message_id, reply_markup=get_control_keyboard(user_state[uid]['step']))
-                last_text = new_text
+                await bot.edit_message_text(
+                    f"{msg.text.splitlines()[0]}\n{time_str}",
+                    chat_id=uid,
+                    message_id=msg.message_id,
+                    reply_markup=get_control_keyboard(user_state[uid]['step'])
+                )
             except:
                 pass
+        if remaining <= 0:
+            break
         await asyncio.sleep(1)
     if uid in user_state:
         await start_position(uid)
