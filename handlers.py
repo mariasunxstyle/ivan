@@ -1,55 +1,12 @@
 from aiogram import types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from bot import bot, dp
-import asyncio, time
-
+import asyncio
 from texts import GREETING, INFO_TEXT
-from keyboards import POSITIONS, DURATIONS_MIN, format_duration
+from keyboards import POSITIONS, DURATIONS_MIN, format_duration, get_control_keyboard, get_continue_keyboard, control_keyboard_full, steps_keyboard, end_keyboard
 from state import user_state, tasks, step_completion_shown
+from timer import timer
 
-# === Генерация клавиатур ===
-
-steps_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
-step_buttons = []
-for i, row in enumerate(DURATIONS_MIN):
-    total = sum(row)
-    h = int(total // 60)
-    m = int(total % 60)
-    label = f"Шаг {i + 1} ({f'{h} ч ' if h else ''}{m} мин)"
-    step_buttons.append(KeyboardButton(label))
-for i in range(0, len(step_buttons), 4):
-    steps_keyboard.add(*step_buttons[i:i + 4])
-steps_keyboard.add(KeyboardButton("ℹ️ Инфо"))
-
-
-def get_control_keyboard(step):
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(KeyboardButton("⏭️ Пропустить"))
-    kb.add(KeyboardButton("⛔ Завершить"))
-    kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)" if step <= 2 else "↩️ Назад на 2 шага (после перерыва)"))
-    kb.add(KeyboardButton("📋 Вернуться к шагам"))
-    return kb
-
-
-def get_continue_keyboard(step):
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(KeyboardButton("▶️ Продолжить"))
-    kb.add(KeyboardButton("📋 Вернуться к шагам"))
-    kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)" if step <= 2 else "↩️ Назад на 2 шага (после перерыва)"))
-    kb.add(KeyboardButton("⛔ Завершить"))
-    return kb
-
-
-control_keyboard_full = ReplyKeyboardMarkup(resize_keyboard=True)
-control_keyboard_full.add(KeyboardButton("📋 Вернуться к шагам"))
-control_keyboard_full.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
-control_keyboard_full.add(KeyboardButton("⛔ Завершить"))
-
-end_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-end_keyboard.add(
-    KeyboardButton("📋 Вернуться к шагам"),
-    KeyboardButton("↩️ Назад на 2 шага (после перерыва)")
-)
 @dp.message_handler(commands=['start'])
 async def send_welcome(msg: types.Message):
     await msg.answer(GREETING, reply_markup=steps_keyboard)
@@ -70,36 +27,43 @@ async def start_position(uid):
     state = user_state.get(uid)
     if not state:
         return
+
     step = state["step"]
     pos = state["position"]
+
     if step > 12:
-        await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
+        await bot.send_message(
+            uid,
+            "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.",
+            reply_markup=control_keyboard_full
+        )
         return
+
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step-1][pos]
+
         message = await bot.send_message(
-    uid,
-    f"{name} — {format_duration(dur)}\n⏳ Таймер запущен...",
-    reply_markup=get_control_keyboard(step)
-)
+            uid,
+            f"{name} — {format_duration(dur)}\n⏳ Таймер запущен...",
+            reply_markup=get_control_keyboard(step)
+        )
+
         state["position"] += 1
         tasks[uid] = asyncio.create_task(timer(uid, int(dur * 60), message))
+
     except IndexError:
         if step == 12:
-            await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
+            await bot.send_message(
+                uid,
+                "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.",
+                reply_markup=control_keyboard_full
+            )
         elif uid not in step_completion_shown:
             step_completion_shown.add(uid)
             message = "Шаг завершён. Выбирай ▶️ Продолжить или отдохни ☀️."
             message += "\nЕсли был перерыв — вернись на шаг 1." if step <= 2 else "\nЕсли был перерыв — вернись на 2 шага назад."
             await bot.send_message(uid, message, reply_markup=get_continue_keyboard(step))
-
-from timer import timer
-
-    async def timer(uid, seconds, msg):
-    ...
-    if uid in user_state:  # ← отступ 4 пробела
-        await start_position(uid)
 
 @dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
 async def skip(msg: types.Message):
