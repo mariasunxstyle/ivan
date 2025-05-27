@@ -162,6 +162,7 @@ async def timer(uid, seconds, msg):
         "⬤⬤⬤⬤⬤⬤○○○○", "⬤⬤⬤⬤⬤⬤⬤○○○", "⬤⬤⬤⬤⬤⬤⬤⬤○○", "⬤⬤⬤⬤⬤⬤⬤⬤⬤○", "⬤⬤⬤⬤⬤⬤⬤⬤⬤⬤"
     ]
     last_state = ""
+
     while True:
         elapsed = time.monotonic() - start
         remaining = max(0, int(seconds - elapsed))
@@ -172,16 +173,16 @@ async def timer(uid, seconds, msg):
         minutes = remaining // 60
         seconds_remain = remaining % 60
         time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
-        header = msg.text.split("\n")[0]  # Линия с позицией и длительностью
-text = f"{header}\n⏳ Осталось: {time_label}\n{bar}"
+        header = msg.text.split("\n")[0]
+        text = f"{header}\n⏳ Осталось: {time_label}\n{bar}"
 
         if text != last_state:
             try:
                 await bot.edit_message_text(
-    text=text,
-    chat_id=uid,
-    message_id=msg.message_id
-)
+                    text=text,
+                    chat_id=uid,
+                    message_id=msg.message_id
+                )
             except:
                 pass
             last_state = text
@@ -192,6 +193,7 @@ text = f"{header}\n⏳ Осталось: {time_label}\n{bar}"
 
     if uid in user_state:
         await start_position(uid)
+
 
 @dp.message_handler(lambda m: m.text == "⛔ Завершить")
 async def end(msg: types.Message):
