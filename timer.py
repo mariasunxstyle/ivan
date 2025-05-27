@@ -6,6 +6,12 @@ from state import user_state
 async def timer(uid, seconds, msg):
     start = time.monotonic()
 
+    # Отправляем позицию отдельно
+    try:
+        await bot.send_message(uid, msg.text)
+    except Exception as e:
+        print("Ошибка отправки позиции:", e)
+
     while True:
         elapsed = time.monotonic() - start
         remaining = max(0, int(seconds - elapsed))
@@ -15,10 +21,9 @@ async def timer(uid, seconds, msg):
         time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
 
         try:
-            await bot.send_message(uid, f"{msg.text}
-⏳ Осталось: {time_label}")
+            await bot.send_message(uid, f"⏳ Осталось: {time_label}")
         except Exception as e:
-            print("Ошибка отправки сообщения:", e)
+            print("Ошибка отправки таймера:", e)
 
         if remaining <= 0:
             break
@@ -28,3 +33,4 @@ async def timer(uid, seconds, msg):
     if uid in user_state:
         from handlers import start_position
         await start_position(uid)
+
