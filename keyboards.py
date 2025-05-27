@@ -1,5 +1,8 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from texts import format_duration  # если у тебя есть отдельная функция
+from state import user_state
 
+# Примерные значения, если нужны
 POSITIONS = ["Лицом вверх", "На животе", "Левый бок", "Правый бок", "В тени"]
 DURATIONS_MIN = [
     [1.5, 1.5, 1.0, 1.0, 3.0],
@@ -18,3 +21,42 @@ DURATIONS_MIN = [
 
 def format_duration(mins):
     return f"{int(mins)} мин" if mins == int(mins) else f"{int(mins)} мин {int((mins - int(mins)) * 60)} сек"
+
+def get_control_keyboard(step):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(KeyboardButton("⏭️ Пропустить"))
+    kb.add(KeyboardButton("⛔ Завершить"))
+    kb.add(KeyboardButton("↩️ Назад на 1 шаг (если был перерыв)" if step <= 2 else "↩️ Назад на 2 шага (после перерыва)"))
+    kb.add(KeyboardButton("📋 Вернуться к шагам"))
+    return kb
+
+def get_continue_keyboard(step):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(KeyboardButton("▶️ Продолжить"))
+    kb.add(KeyboardButton("📋 Вернуться к шагам"))
+    kb.add(KeyboardButton("↩️ Назад на 1 шаг (если был перерыв)" if step <= 2 else "↩️ Назад на 2 шага (после перерыва)"))
+    kb.add(KeyboardButton("⛔ Завершить"))
+    return kb
+
+control_keyboard_full = ReplyKeyboardMarkup(resize_keyboard=True)
+control_keyboard_full.add(KeyboardButton("📋 Вернуться к шагам"))
+control_keyboard_full.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
+control_keyboard_full.add(KeyboardButton("⛔ Завершить"))
+
+end_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+end_keyboard.add(
+    KeyboardButton("📋 Вернуться к шагам"),
+    KeyboardButton("↩️ Назад на 2 шага (после перерыва)")
+)
+
+steps_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
+step_buttons = []
+for i, row in enumerate(DURATIONS_MIN):
+    total = sum(row)
+    h = int(total // 60)
+    m = int(total % 60)
+    label = f"Шаг {i + 1} ({f'{h} ч ' if h else ''}{m} мин)"
+    step_buttons.append(KeyboardButton(label))
+for i in range(0, len(step_buttons), 4):
+    steps_keyboard.add(*step_buttons[i:i + 4])
+steps_keyboard.add(KeyboardButton("ℹ️ Инфо"))
