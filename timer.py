@@ -30,8 +30,7 @@ async def timer(uid, seconds, msg):
         seconds_remain = remaining % 60
         time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
 
-        # Главное изменение — только первая строка позиции остаётся
-        new_text = msg.text.split("\n")[0] + f"\n⏳ Осталось: {time_label}\n{bar}"
+        new_text = f"{msg.text.splitlines()[0]}\n⏳ Осталось: {time_label}\n{bar}"
 
         if new_text != last_state:
             try:
