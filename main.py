@@ -65,10 +65,6 @@ def get_end_keyboard(step):
     kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
     return kb
 
-user_state = {}
-tasks = {}
-step_completion_shown = set()
-
 @dp.message_handler(commands=['start'])
 async def send_welcome(msg: types.Message):
     await msg.answer("Привет, солнце! ☀️\nТы в таймере по методу суперкомпенсации.\nКожа адаптируется к солнцу постепенно — и загар получается ровным, глубоким и без ожогов.\n\nМетод основан на научных принципах: короткие интервалы активируют выработку меланина и гормонов адаптации.\nТакой подход снижает риск ожогов и делает загар устойчивым.\n\nНачинай с шага 1 — даже если уже немного загорел(а).\nКаждый новый день и после перерыва — возвращайся на 2 шага назад.\n\nХочешь подробности — жми /info.", reply_markup=steps_keyboard)
@@ -83,6 +79,9 @@ async def handle_step(msg: types.Message):
     t = tasks.pop(uid, None)
     if t: t.cancel()
     step = int(msg.text.split()[1])
+    if step > 12:
+        await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=get_end_keyboard(12))
+        return
     user_state[uid] = {"step": step, "position": 0}
     step_completion_shown.discard(uid)
     await start_position(uid)
@@ -93,7 +92,7 @@ async def start_position(uid):
         return
     step = state["step"]
     if step > 12:
-        await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=get_end_keyboard(step))
+        await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=get_end_keyboard(12))
         return
     pos = state["position"]
     try:
@@ -116,22 +115,17 @@ async def start_position(uid):
 
 async def timer(uid, seconds, msg):
     start = time.monotonic()
-    last_state = ""
     while True:
         elapsed = time.monotonic() - start
         remaining = max(0, int(seconds - elapsed))
         minutes = remaining // 60
         seconds_remain = remaining % 60
-        time_label = f"⏳ Осталось: {minutes} мин {seconds_remain} сек" if minutes > 0 else f"⏳ Осталось: {seconds_remain} сек"
-        text = f"{msg.text.splitlines()[0]}\n{time_label}"
-
-        if text != last_state:
-            try:
-                await bot.edit_message_text(text=text, chat_id=uid, message_id=msg.message_id)
-            except:
-                pass
-            last_state = text
-
+        time_text = f"⏳ Осталось: {minutes} мин {seconds_remain} сек" if minutes else f"⏳ Осталось: {seconds_remain} сек"
+        new_text = f"{msg.text.splitlines()[0]}\n{time_text}"
+        try:
+            await bot.edit_message_text(chat_id=uid, message_id=msg.message_id, text=new_text)
+        except:
+            pass
         if remaining <= 0:
             break
         await asyncio.sleep(1)
@@ -197,6 +191,9 @@ async def continue_step(msg: types.Message):
     if not state:
         return
     step = state["step"] + 1
+    if step > 12:
+        await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=get_end_keyboard(12))
+        return
     user_state[uid] = {"step": step, "position": 0}
     step_completion_shown.discard(uid)
     await bot.send_message(uid, f"Шаг {step}")
