@@ -152,10 +152,10 @@ async def start_position(uid):
 
 async def timer(uid, seconds, msg):
     start = time.monotonic()
-bar_states = [
-    "⬤○○○○○○○○○", "⬤⬤○○○○○○○○", "⬤⬤⬤○○○○○○○", "⬤⬤⬤⬤○○○○○○", "⬤⬤⬤⬤⬤○○○○○",
-    "⬤⬤⬤⬤⬤⬤○○○○", "⬤⬤⬤⬤⬤⬤⬤○○○", "⬤⬤⬤⬤⬤⬤⬤⬤○○", "⬤⬤⬤⬤⬤⬤⬤⬤⬤○", "⬤⬤⬤⬤⬤⬤⬤⬤⬤⬤"
-]
+    bar_states = [
+        "⬤○○○○○○○○○", "⬤⬤○○○○○○○○", "⬤⬤⬤○○○○○○○", "⬤⬤⬤⬤○○○○○○", "⬤⬤⬤⬤⬤○○○○○",
+        "⬤⬤⬤⬤⬤⬤○○○○", "⬤⬤⬤⬤⬤⬤⬤○○○", "⬤⬤⬤⬤⬤⬤⬤⬤○○", "⬤⬤⬤⬤⬤⬤⬤⬤⬤○", "⬤⬤⬤⬤⬤⬤⬤⬤⬤⬤"
+    ]
     last_state = ""
     while True:
         elapsed = time.monotonic() - start
@@ -171,7 +171,11 @@ bar_states = [
 
         if text != last_state:
             try:
-                await bot.edit_message_text(text=msg.text.split("\n")[0] + "\n" + text, chat_id=uid, message_id=msg.message_id)
+                await bot.edit_message_text(
+                    text=msg.text.split("\n")[0] + "\n" + text,
+                    chat_id=uid,
+                    message_id=msg.message_id
+                )
             except:
                 pass
             last_state = text
@@ -182,13 +186,6 @@ bar_states = [
 
     if uid in user_state:
         await start_position(uid)
-
-@dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
-async def skip(msg: types.Message):
-    uid = msg.chat.id
-    t = tasks.pop(uid, None)
-    if t: t.cancel()
-    await start_position(uid)
 
 @dp.message_handler(lambda m: m.text == "⛔ Завершить")
 async def end(msg: types.Message):
