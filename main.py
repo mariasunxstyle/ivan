@@ -106,6 +106,23 @@ INFO_TEXT = """ℹ️ Инфо
 user_state = {}
 tasks = {}
 step_completion_shown = set()
+
+@dp.message_handler(commands=['start'])
+async def send_welcome(msg: types.Message):
+    await msg.answer(GREETING, reply_markup=steps_keyboard)
+
+@dp.message_handler(commands=['info'])
+@dp.message_handler(lambda m: m.text == "ℹ️ Инфо")
+async def info(msg: types.Message):
+    await msg.answer(INFO_TEXT)
+
+@dp.message_handler(lambda m: m.text.startswith("Шаг "))
+async def handle_step(msg: types.Message):
+    step = int(msg.text.split()[1])
+    user_state[msg.chat.id] = {"step": step, "position": 0}
+    step_completion_shown.discard(msg.chat.id)
+    await start_position(msg.chat.id)
+
 async def start_position(uid):
     state = user_state.get(uid)
     if not state:
@@ -118,11 +135,7 @@ async def start_position(uid):
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step-1][pos]
-        message = await bot.send_message(
-            uid,
-            f"{name} — {format_duration(dur)}\n⏳ Осталось: {format_duration(dur)}\n⬤○○○○○○○○○",
-            reply_markup=get_control_keyboard(step)
-        )
+        message = await bot.send_message(uid, f"{name} — {format_duration(dur)}\n⏳ Таймер запущен...")
         state["position"] += 1
         tasks[uid] = asyncio.create_task(timer(uid, int(dur * 60), message))
     except IndexError:
@@ -140,11 +153,12 @@ async def start_position(uid):
 async def timer(uid, seconds, msg):
     start = time.monotonic()
     bar_states = [
-        "⬤○○○○○○○○○", "⬤⬤○○○○○○○○", "⬤⬤⬤○○○○○○○", "⬤⬤⬤⬤○○○○○○", "⬤⬤⬤⬤⬤○○○○○",
-        "⬤⬤⬤⬤⬤⬤○○○○", "⬤⬤⬤⬤⬤⬤⬤○○○", "⬤⬤⬤⬤⬤⬤⬤⬤○○", "⬤⬤⬤⬤⬤⬤⬤⬤⬤○", "⬤⬤⬤⬤⬤⬤⬤⬤⬤⬤"
+        "☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️☀️🌑🌑🌑🌑🌑🌑🌑",
+        "☀️☀️☀️☀️🌑🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️☀️🌑🌑🌑🌑",
+        "☀️☀️☀️☀️☀️☀️☀️🌑🌑🌑", "☀️☀️☀️☀️☀️☀️☀️☀️🌑🌑",
+        "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑", "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"
     ]
     last_state = ""
-
     while True:
         elapsed = time.monotonic() - start
         remaining = max(0, int(seconds - elapsed))
@@ -155,16 +169,11 @@ async def timer(uid, seconds, msg):
         minutes = remaining // 60
         seconds_remain = remaining % 60
         time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
-        header = msg.text.split("\n")[0]
-        text = f"{header}\n⏳ Осталось: {time_label}\n{bar}"
+        text = f"⏳ Осталось: {time_label}\n{bar}"
 
         if text != last_state:
             try:
-                await bot.edit_message_text(
-                    text=text,
-                    chat_id=uid,
-                    message_id=msg.message_id
-                )
+                await bot.edit_message_text(text=msg.text.split("\n")[0] + "\n" + text, chat_id=uid, message_id=msg.message_id)
             except:
                 pass
             last_state = text
@@ -179,11 +188,55 @@ async def timer(uid, seconds, msg):
 @dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
 async def skip(msg: types.Message):
     uid = msg.chat.id
-    task = tasks.pop(uid, None)
-    if task:
-        task.cancel()
+    t = tasks.pop(uid, None)
+    if t: t.cancel()
+    await start_position(uid)
+
+@dp.message_handler(lambda m: m.text == "⛔ Завершить")
+async def end(msg: types.Message):
+    uid = msg.chat.id
+    t = tasks.pop(uid, None)
+    if t: t.cancel()
+    user_state[uid] = {"last_step": user_state.get(uid, {}).get("step", 1)}
+    step_completion_shown.discard(uid)
+    await bot.send_message(uid, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
+
+@dp.message_handler(lambda m: m.text.startswith("↩️"))
+async def back(msg: types.Message):
+    uid = msg.chat.id
     state = user_state.get(uid)
-    if state:
-        await start_position(uid)
+    if not state:
+        last = user_state.get(uid, {}).get("last_step", 1)
+        user_state[uid] = {"step": 1, "position": 0} if last <= 2 else {"step": last - 2, "position": 0}
+    else:
+        step = state["step"]
+        state["step"] = 1 if step <= 2 else step - 2
+        state["position"] = 0
+    step_completion_shown.discard(uid)
+    await bot.send_message(uid, f"Шаг {user_state[uid]['step']}")
+    await start_position(uid)
 
+@dp.message_handler(lambda m: m.text == "📋 Вернуться к шагам")
+async def menu(msg: types.Message):
+    uid = msg.chat.id
+    t = tasks.pop(uid, None)
+    if t: t.cancel()
+    user_state.pop(uid, None)
+    step_completion_shown.discard(uid)
+    await msg.answer("Выбери шаг:", reply_markup=steps_keyboard)
 
+@dp.message_handler(lambda m: m.text == "▶️ Продолжить")
+async def continue_step(msg: types.Message):
+    uid = msg.chat.id
+    state = user_state.get(uid)
+    if not state:
+        return
+    state["step"] += 1
+    state["position"] = 0
+    step_completion_shown.discard(uid)
+    await bot.send_message(uid, f"Шаг {state['step']}")
+    await start_position(uid)
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    executor.start_polling(dp, skip_updates=True)
