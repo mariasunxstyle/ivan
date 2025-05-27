@@ -96,7 +96,9 @@ async def start_position(uid):
 
 from timer import timer
 
-    if uid in user_state:
+    async def timer(uid, seconds, msg):
+    ...
+    if uid in user_state:  # ← отступ 4 пробела
         await start_position(uid)
 
 @dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
