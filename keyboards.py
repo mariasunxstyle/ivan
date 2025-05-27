@@ -1,8 +1,5 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-from texts import format_duration  # если у тебя есть отдельная функция
-from state import user_state
 
-# Примерные значения, если нужны
 POSITIONS = ["Лицом вверх", "На животе", "Левый бок", "Правый бок", "В тени"]
 DURATIONS_MIN = [
     [1.5, 1.5, 1.0, 1.0, 3.0],
