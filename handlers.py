@@ -1,3 +1,45 @@
+from aiogram import types
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from bot import bot, dp
+import asyncio, time
+
+from texts import GREETING, INFO_TEXT
+from keyboards import POSITIONS, DURATIONS_MIN, format_duration
+from state import user_state, tasks, step_completion_shown
+
+# === Генерация клавиатур ===
+
+steps_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
+step_buttons = []
+for i, row in enumerate(DURATIONS_MIN):
+    total = sum(row)
+    h = int(total // 60)
+    m = int(total % 60)
+    label = f"Шаг {i + 1} ({f'{h} ч ' if h else ''}{m} мин)"
+    step_buttons.append(KeyboardButton(label))
+for i in range(0, len(step_buttons), 4):
+    steps_keyboard.add(*step_buttons[i:i + 4])
+steps_keyboard.add(KeyboardButton("ℹ️ Инфо"))
+
+
+def get_control_keyboard(step):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(KeyboardButton("⏭️ Пропустить"))
+    kb.add(KeyboardButton("⛔ Завершить"))
+    kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)" if step <= 2 else "↩️ Назад на 2 шага (после перерыва)"))
+    kb.add(KeyboardButton("📋 Вернуться к шагам"))
+    return kb
+
+
+def get_continue_keyboard(step):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(KeyboardButton("▶️ Продолжить"))
+    kb.add(KeyboardButton("📋 Вернуться к шагам"))
+    kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)" if step <= 2 else "↩️ Назад на 2 шага (после перерыва)"))
+    kb.add(KeyboardButton("⛔ Завершить"))
+    return kb
+
+
 control_keyboard_full = ReplyKeyboardMarkup(resize_keyboard=True)
 control_keyboard_full.add(KeyboardButton("📋 Вернуться к шагам"))
 control_keyboard_full.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
@@ -8,7 +50,6 @@ end_keyboard.add(
     KeyboardButton("📋 Вернуться к шагам"),
     KeyboardButton("↩️ Назад на 2 шага (после перерыва)")
 )
-
 @dp.message_handler(commands=['start'])
 async def send_welcome(msg: types.Message):
     await msg.answer(GREETING, reply_markup=steps_keyboard)
@@ -52,9 +93,9 @@ async def start_position(uid):
 async def timer(uid, seconds, msg):
     start = time.monotonic()
     bar_states = ["☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️☀️🌑🌑🌑🌑🌑🌑🌑",
-        "☀️☀️☀️☀️🌑🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️☀️🌑🌑🌑🌑",
-        "☀️☀️☀️☀️☀️☀️☀️🌑🌑🌑", "☀️☀️☀️☀️☀️☀️☀️☀️🌑🌑",
-        "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑", "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"]
+                  "☀️☀️☀️☀️🌑🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️☀️🌑🌑🌑🌑",
+                  "☀️☀️☀️☀️☀️☀️☀️🌑🌑🌑", "☀️☀️☀️☀️☀️☀️☀️☀️🌑🌑",
+                  "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑", "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"]
     last_state = ""
     while True:
         elapsed = time.monotonic() - start
