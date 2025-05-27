@@ -172,15 +172,16 @@ async def timer(uid, seconds, msg):
         minutes = remaining // 60
         seconds_remain = remaining % 60
         time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
-        text = f"⏳ Осталось: {time_label}\n{bar}"
+        header = msg.text.split("\n")[0]  # Линия с позицией и длительностью
+text = f"{header}\n⏳ Осталось: {time_label}\n{bar}"
 
         if text != last_state:
             try:
                 await bot.edit_message_text(
-                    text=msg.text.split("\n")[0] + "\n" + text,
-                    chat_id=uid,
-                    message_id=msg.message_id
-                )
+    text=text,
+    chat_id=uid,
+    message_id=msg.message_id
+)
             except:
                 pass
             last_state = text
@@ -196,8 +197,13 @@ async def timer(uid, seconds, msg):
 async def end(msg: types.Message):
     uid = msg.chat.id
     t = tasks.pop(uid, None)
-    if t: t.cancel()
-    user_state[uid] = {"last_step": user_state.get(uid, {}).get("step", 1)}
+    if t:
+        t.cancel()
+    state = user_state.get(uid)
+    if state:
+        user_state[uid]["last_step"] = state.get("step", 1)
+    else:
+        user_state[uid] = {"last_step": 1}
     step_completion_shown.discard(uid)
     await bot.send_message(uid, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
 
