@@ -96,30 +96,52 @@ async def start_position(uid):
 
 async def timer(uid, seconds, msg):
     start = time.monotonic()
-    bar_states = ["☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️☀️🌑🌑🌑🌑🌑🌑🌑",
-                  "☀️☀️☀️☀️🌑🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️☀️🌑🌑🌑🌑",
-                  "☀️☀️☀️☀️☀️☀️☀️🌑🌑🌑", "☀️☀️☀️☀️☀️☀️☀️☀️🌑🌑",
-                  "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑", "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"]
+    bar_states = [
+        "☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑",
+        "☀️☀️🌑🌑🌑🌑🌑🌑🌑🌑",
+        "☀️☀️☀️🌑🌑🌑🌑🌑🌑🌑",
+        "☀️☀️☀️☀️🌑🌑🌑🌑🌑🌑",
+        "☀️☀️☀️☀️☀️🌑🌑🌑🌑🌑",
+        "☀️☀️☀️☀️☀️☀️🌑🌑🌑🌑",
+        "☀️☀️☀️☀️☀️☀️☀️🌑🌑🌑",
+        "☀️☀️☀️☀️☀️☀️☀️☀️🌑🌑",
+        "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑",
+        "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"
+    ]
     last_state = ""
+
     while True:
         elapsed = time.monotonic() - start
         remaining = max(0, int(seconds - elapsed))
         percent_done = min(elapsed / seconds, 1.0)
         bar_index = min(int(percent_done * 10), 9)
         bar = bar_states[bar_index]
+
         minutes = remaining // 60
         seconds_remain = remaining % 60
         time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
+
+        # обновляем текст
         text = f"⏳ Осталось: {time_label}\n{bar}"
+        new_text = msg.text.split("\n")[0] + "\n" + text
+
         if text != last_state:
             try:
-                await bot.edit_message_text(text=msg.text.split("\n")[0] + "\n" + text, chat_id=uid, message_id=msg.message_id)
-            except:
+                await bot.edit_message_text(
+                    chat_id=uid,
+                    message_id=msg.message_id,
+                    text=new_text,
+                    reply_markup=msg.reply_markup  # сохраняем клавиатуру
+                )
+            except Exception:
                 pass
             last_state = text
+
         if remaining <= 0:
             break
+
         await asyncio.sleep(2)
+
     if uid in user_state:
         await start_position(uid)
 
