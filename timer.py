@@ -5,22 +5,9 @@ from state import user_state
 
 async def timer(uid, seconds, msg):
     start = time.monotonic()
+    last_state = ""
 
-    minutes = seconds // 60
-    seconds_remain = seconds % 60
-    time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
-
-    position_text = msg.text
-    initial_text = f"{position_text}\n⏳ Осталось: {time_label}"
-
-    # Отправляем позицию + таймер в одном сообщении
-    try:
-        sent = await bot.send_message(uid, initial_text)
-    except Exception as e:
-        print("Ошибка отправки сообщения:", e)
-        return
-
-    last_state = initial_text
+    position_text = msg.text.split("\n")[0]  # только строка позиции
 
     while True:
         elapsed = time.monotonic() - start
@@ -30,14 +17,15 @@ async def timer(uid, seconds, msg):
         seconds_remain = remaining % 60
         time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
 
-        new_text = f"{position_text}\n⏳ Осталось: {time_label}"
+        new_text = f"{position_text} — ⏳ Осталось: {time_label}"
 
         if new_text != last_state:
             try:
                 await bot.edit_message_text(
                     chat_id=uid,
-                    message_id=sent.message_id,
-                    text=new_text
+                    message_id=msg.message_id,
+                    text=new_text,
+                    reply_markup=msg.reply_markup
                 )
             except Exception as e:
                 print("Ошибка редактирования таймера:", e)
@@ -50,6 +38,9 @@ async def timer(uid, seconds, msg):
 
     if uid in user_state:
         from handlers import start_position
-        await start_position(uid)
+        state = user_state.get(uid)
+        if state and state["position"] < len(POSITIONS):
+            await start_position(uid)
+
 
 
