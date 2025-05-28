@@ -1,10 +1,13 @@
 import asyncio
 import logging
 import os
-import time
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils import executor
+
+from timer import run_timer
+from state import user_state, tasks, step_completion_shown
+from texts import GREETING, INFO_TEXT
 
 API_TOKEN = os.getenv("TOKEN")
 bot = Bot(token=API_TOKEN)
@@ -74,39 +77,6 @@ end_keyboard.add(
     KeyboardButton("↩️ Назад на 2 шага (после перерыва)")
 )
 
-GREETING = """Привет, солнце! ☀️
-Ты в таймере по методу суперкомпенсации.
-Кожа адаптируется к солнцу постепенно — и загар получается ровным, глубоким и без ожогов.
-
-Метод основан на научных принципах: короткие интервалы активируют выработку меланина и гормонов адаптации.
-Такой подход снижает риск ожогов и делает загар устойчивым.
-
-Начинай с шага 1 — даже если уже немного загорел(а).
-Каждый новый день и после перерыва — возвращайся на 2 шага назад.
-
-Хочешь подробности — жми /info."""
-
-INFO_TEXT = """ℹ️ Инфо
-Метод суперкомпенсации — научно обоснованный способ безопасного загара.
-Ты проходишь 12 шагов — каждый с таймингом и сменой позиций.
-
-Как использовать:
-1. Начни с шага 1
-2. Включи таймер и следуй позициям
-3. Каждый новый день и после любого перерыва — возвращайся на 2 шага назад
-4. После завершения всех 12 шагов — можешь поддерживать загар в комфортном ритме
-
-Рекомендуем загорать с 7:00 до 11:00 и после 17:00 — в это время солнце мягкое,
-и при отсутствии противопоказаний можно загорать без SPF.
-С 11:00 до 17:00 — солнце более агрессивное. Если остаёшься на улице —
-надевай одежду или используй SPF.
-
-Если есть вопросы — пиши: @sunxbeach_director"""
-
-user_state = {}
-tasks = {}
-step_completion_shown = set()
-
 @dp.message_handler(commands=['start'])
 async def send_welcome(msg: types.Message):
     await msg.answer(GREETING, reply_markup=steps_keyboard)
@@ -137,7 +107,7 @@ async def start_position(uid):
         dur = DURATIONS_MIN[step-1][pos]
         message = await bot.send_message(uid, f"{name} — {format_duration(dur)}\n⏳ Таймер запущен...")
         state["position"] += 1
-        tasks[uid] = asyncio.create_task(timer(uid, int(dur * 60), message))
+        tasks[uid] = asyncio.create_task(run_timer(bot, uid, int(dur * 60), message, user_state, start_position))
     except IndexError:
         if step == 12:
             await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
@@ -149,41 +119,6 @@ async def start_position(uid):
             else:
                 message += "\nЕсли был перерыв — вернись на 2 шага назад."
             await bot.send_message(uid, message, reply_markup=get_continue_keyboard(step))
-
-async def timer(uid, seconds, msg):
-    start = time.monotonic()
-    bar_states = [
-        "☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️☀️🌑🌑🌑🌑🌑🌑🌑",
-        "☀️☀️☀️☀️🌑🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️☀️🌑🌑🌑🌑",
-        "☀️☀️☀️☀️☀️☀️☀️🌑🌑🌑", "☀️☀️☀️☀️☀️☀️☀️☀️🌑🌑",
-        "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑", "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"
-    ]
-    last_state = ""
-    while True:
-        elapsed = time.monotonic() - start
-        remaining = max(0, int(seconds - elapsed))
-        percent_done = min(elapsed / seconds, 1.0)
-        bar_index = min(int(percent_done * 10), 9)
-
-        bar = bar_states[bar_index]
-        minutes = remaining // 60
-        seconds_remain = remaining % 60
-        time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
-        text = f"⏳ Осталось: {time_label}\n{bar}"
-
-        if text != last_state:
-            try:
-                await bot.edit_message_text(text=msg.text.split("\n")[0] + "\n" + text, chat_id=uid, message_id=msg.message_id)
-            except:
-                pass
-            last_state = text
-
-        if remaining <= 0:
-            break
-        await asyncio.sleep(2)
-
-    if uid in user_state:
-        await start_position(uid)
 
 @dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
 async def skip(msg: types.Message):
