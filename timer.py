@@ -1,18 +1,40 @@
+import time
 import asyncio
 from bot import bot
+from state import user_state
+from main import start_position
 
-async def timer(uid, total_seconds, message, start_position, position_name):
-    for remaining in range(total_seconds, 0, -1):
-        mins, secs = divmod(remaining, 60)
-        time_label = f"{mins} мин {secs:02d} сек" if mins else f"{secs} сек"
-        try:
-            await bot.edit_message_text(
-                text=f"{position_name} — ⏳ Осталось: {time_label}",
-                chat_id=message.chat.id,
-                message_id=message.message_id
-            )
-        except:
-            pass
-        await asyncio.sleep(1)
+async def timer(uid, seconds, msg):
+    start = time.monotonic()
+    bar_states = [
+        "☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️☀️🌑🌑🌑🌑🌑🌑🌑",
+        "☀️☀️☀️☀️🌑🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️☀️🌑🌑🌑🌑",
+        "☀️☀️☀️☀️☀️☀️☀️🌑🌑🌑", "☀️☀️☀️☀️☀️☀️☀️☀️🌑🌑",
+        "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑", "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"
+    ]
+    last_state = ""
+    while True:
+        elapsed = time.monotonic() - start
+        remaining = max(0, int(seconds - elapsed))
+        percent_done = min(elapsed / seconds, 1.0)
+        bar_index = min(int(percent_done * 10), 9)
 
-    await start_position(uid)
+        bar = bar_states[bar_index]
+        minutes = remaining // 60
+        seconds_remain = remaining % 60
+        time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
+        text = f"⏳ Осталось: {time_label}\n{bar}"
+
+        if text != last_state:
+            try:
+                await bot.edit_message_text(text=msg.text.split("\n")[0] + "\n" + text, chat_id=uid, message_id=msg.message_id)
+            except:
+                pass
+            last_state = text
+
+        if remaining <= 0:
+            break
+        await asyncio.sleep(2)
+
+    if uid in user_state:
+        await start_position(uid)
