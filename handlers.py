@@ -5,7 +5,7 @@ import asyncio
 from texts import GREETING, INFO_TEXT
 from keyboards import POSITIONS, DURATIONS_MIN, format_duration, get_control_keyboard, get_continue_keyboard, control_keyboard_full, steps_keyboard, end_keyboard
 from state import user_state, tasks, step_completion_shown
-from timer import timer
+import timer  # изменено здесь
 
 @dp.message_handler(commands=['start'])
 async def send_welcome(msg: types.Message):
@@ -43,14 +43,19 @@ async def start_position(uid):
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step-1][pos]
 
+        position_message = await bot.send_message(
+            uid,
+            f"{name}"
+        )
+
         message = await bot.send_message(
             uid,
-            f"{name} — {format_duration(dur)}",
+            f"⏳ Осталось: {format_duration(dur)}",
             reply_markup=get_control_keyboard(step)
         )
 
         state["position"] += 1
-        tasks[uid] = asyncio.create_task(timer(uid, int(dur * 60), message))
+        tasks[uid] = asyncio.create_task(timer.timer(uid, int(dur * 60), message, start_position))
 
     except IndexError:
         if step == 12:
