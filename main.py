@@ -82,7 +82,7 @@ async def continue_step(msg: types.Message):
     state["step"] += 1
     state["position"] = 0
     step_completion_shown.discard(uid)
-    await msg.answer(f"Шаг {state['step']}")
+    await msg.answer(f"Шаг {user_state[uid]['step']}")
     await start_position(uid)
 
 if __name__ == "__main__":
