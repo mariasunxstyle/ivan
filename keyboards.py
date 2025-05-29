@@ -1,68 +1,52 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-POSITIONS = ["Лицом вверх", "На животе", "Левый бок", "Правый бок", "В тени"]
-DURATIONS_MIN = [
-    [1.5, 1.5, 1.0, 1.0, 3.0],
-    [2.0, 2.0, 1.0, 1.0, 3.0],
-    [3.0, 3.0, 1.5, 1.5, 5.0],
-    [5.0, 5.0, 2.5, 2.5, 5.0],
-    [7.0, 7.0, 3.0, 3.0, 7.0],
-    [9.0, 9.0, 5.0, 5.0, 10.0],
-    [12.0, 12.0, 7.0, 7.0, 10.0],
-    [15.0, 15.0, 10.0, 10.0, 10.0],
-    [20.0, 20.0, 15.0, 15.0, 15.0],
-    [25.0, 25.0, 20.0, 20.0, 20.0],
-    [35.0, 35.0, 25.0, 25.0, 30.0],
-    [45.0, 45.0, 30.0, 30.0, 40.0],
-]
-
-steps_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
-step_buttons = []
-for i, row in enumerate(DURATIONS_MIN):
-    total = sum(row)
-    h = int(total // 60)
-    m = int(total % 60)
-    label = f"Шаг {i + 1} ({f'{h} ч ' if h else ''}{m} мин)"
-    step_buttons.append(KeyboardButton(label))
-for i in range(0, len(step_buttons), 4):
-    steps_keyboard.add(*step_buttons[i:i + 4])
-steps_keyboard.add(KeyboardButton("ℹ️ Инфо"))
+def steps_keyboard():
+    kb = ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
+    for i, minutes in enumerate([
+        "8 мин", "9 мин", "14 мин", "20 мин",
+        "27 мин", "38 мин", "49 мин", "56 мин",
+        "64 мин", "70 мин", "80 мин", "150 мин"
+    ], start=1):
+        kb.insert(KeyboardButton(f"Шаг {i} — {minutes}"))
+    kb.add(KeyboardButton("ℹ️ Инфо"))
+    return kb
 
 def get_control_keyboard(step):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    if step == 1:
+        kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
+    elif step <= 2:
+        kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
+    else:
+        kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
     kb.add(KeyboardButton("⏭️ Пропустить"))
-    kb.add(KeyboardButton("⛔ Завершить"))
-    if step <= 2:
-        kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
-    else:
-            if step <= 2:
-        kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
-    else:
-        kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
     kb.add(KeyboardButton("📋 Вернуться к шагам"))
+    kb.add(KeyboardButton("⛔ Завершить"))
     return kb
 
-def get_continue_keyboard(step):
+def get_continue_keyboard():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(KeyboardButton("▶️ Продолжить"))
+    kb.add(
+        KeyboardButton("▶️ Продолжить"),
+        KeyboardButton("📋 Вернуться к шагам"),
+        KeyboardButton("↩️ Назад на 2 шага (если был перерыв)"),
+        KeyboardButton("⛔ Завершить")
+    )
+    return kb
+
+def control_keyboard_full():
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(KeyboardButton("⏭️ Пропустить"))
     kb.add(KeyboardButton("📋 Вернуться к шагам"))
-    if step <= 2:
-        kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
-    else:
-            if step <= 2:
-        kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
-    else:
-        kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
+    kb.add(KeyboardButton("↩️ Назад на 2 шага (если был перерыв)"))
     kb.add(KeyboardButton("⛔ Завершить"))
     return kb
 
-control_keyboard_full = ReplyKeyboardMarkup(resize_keyboard=True)
-control_keyboard_full.add(KeyboardButton("📋 Вернуться к шагам"))
-control_keyboard_full.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
-control_keyboard_full.add(KeyboardButton("⛔ Завершить"))
+def end_keyboard():
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(
+        KeyboardButton("📋 Вернуться к шагам"),
+        KeyboardButton("↩️ Назад на 2 шага (если был перерыв)")
+    )
+    return kb
 
-end_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-end_keyboard.add(
-    KeyboardButton("📋 Вернуться к шагам"),
-    KeyboardButton("↩️ Назад на 2 шага (после перерыва)")
-)
