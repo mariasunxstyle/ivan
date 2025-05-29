@@ -5,7 +5,6 @@ from aiogram.utils import executor
 import os
 from dotenv import load_dotenv
 
-
 from keyboards import steps_keyboard, get_continue_keyboard, get_control_keyboard, control_keyboard_full, end_keyboard
 from state import user_state, tasks, step_completion_shown
 from texts import GREETING, INFO_TEXT
@@ -44,7 +43,8 @@ async def end(msg: types.Message):
     uid = msg.chat.id
     t = tasks.pop(uid, None)
     if t: t.cancel()
-    user_state[uid] = {"last_step": user_state.get(uid, {}).get("step", 1)}
+    current_step = user_state.get(uid, {}).get("step", 1)
+    user_state[uid] = {"step": current_step, "last_step": current_step}
     step_completion_shown.discard(uid)
     await msg.answer("Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
 
@@ -60,8 +60,9 @@ async def back(msg: types.Message):
         state["step"] = 1 if step <= 2 else step - 2
         state["position"] = 0
     step_completion_shown.discard(uid)
-    await msg.answer(f"Шаг {{user_state[uid]['step']}}")
+    await msg.answer(f"Шаг {user_state[uid]['step']}")
     await start_position(uid)
+
 @dp.message_handler(lambda m: m.text == "📋 Вернуться к шагам")
 async def menu(msg: types.Message):
     uid = msg.chat.id
@@ -82,9 +83,10 @@ async def continue_step(msg: types.Message):
     state["step"] += 1
     state["position"] = 0
     step_completion_shown.discard(uid)
-    await msg.answer(f"Шаг {user_state[uid]['step']}")
+    await msg.answer(f"Шаг {state['step']}")
     await start_position(uid)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     executor.start_polling(dp, skip_updates=True)
+
