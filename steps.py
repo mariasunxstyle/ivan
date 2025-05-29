@@ -1,14 +1,19 @@
-steps = [
-    {"step": 1, "positions": [{"name": "Лицом вверх", "minutes": 1.5}, {"name": "На животе", "minutes": 1.5}, {"name": "Левый бок", "minutes": 1}, {"name": "Правый бок", "minutes": 1}, {"name": "В тени", "minutes": 3}], "duration_min": 8},
-    {"step": 2, "positions": [{"name": "Лицом вверх", "minutes": 2}, {"name": "На животе", "minutes": 2}, {"name": "Левый бок", "minutes": 1}, {"name": "Правый бок", "minutes": 1}, {"name": "В тени", "minutes": 3}], "duration_min": 9},
-    {"step": 3, "positions": [{"name": "Лицом вверх", "minutes": 3}, {"name": "На животе", "minutes": 3}, {"name": "Левый бок", "minutes": 1.5}, {"name": "Правый бок", "minutes": 1.5}, {"name": "В тени", "minutes": 5}], "duration_min": 10},
-    {"step": 4, "positions": [{"name": "Лицом вверх", "minutes": 5}, {"name": "На животе", "minutes": 5}, {"name": "Левый бок", "minutes": 2.5}, {"name": "Правый бок", "minutes": 2.5}, {"name": "В тени", "minutes": 5}], "duration_min": 12},
-    {"step": 5, "positions": [{"name": "Лицом вверх", "minutes": 7}, {"name": "На животе", "minutes": 7}, {"name": "Левый бок", "minutes": 3}, {"name": "Правый бок", "minutes": 3}, {"name": "В тени", "minutes": 7}], "duration_min": 15},
-    {"step": 6, "positions": [{"name": "Лицом вверх", "minutes": 9}, {"name": "На животе", "minutes": 9}, {"name": "Левый бок", "minutes": 5}, {"name": "Правый бок", "minutes": 5}, {"name": "В тени", "minutes": 10}], "duration_min": 18},
-    {"step": 7, "positions": [{"name": "Лицом вверх", "minutes": 12}, {"name": "На животе", "minutes": 12}, {"name": "Левый бок", "minutes": 7}, {"name": "Правый бок", "minutes": 7}, {"name": "В тени", "minutes": 10}], "duration_min": 20},
-    {"step": 8, "positions": [{"name": "Лицом вверх", "minutes": 15}, {"name": "На животе", "minutes": 15}, {"name": "Левый бок", "minutes": 10}, {"name": "Правый бок", "minutes": 10}, {"name": "В тени", "minutes": 10}], "duration_min": 25},
-    {"step": 9, "positions": [{"name": "Лицом вверх", "minutes": 20}, {"name": "На животе", "minutes": 20}, {"name": "Левый бок", "minutes": 15}, {"name": "Правый бок", "minutes": 15}, {"name": "В тени", "minutes": 15}], "duration_min": 30},
-    {"step": 10, "positions": [{"name": "Лицом вверх", "minutes": 25}, {"name": "На животе", "minutes": 25}, {"name": "Левый бок", "minutes": 20}, {"name": "Правый бок", "minutes": 20}, {"name": "В тени", "minutes": 20}], "duration_min": 40},
-    {"step": 11, "positions": [{"name": "Лицом вверх", "minutes": 35}, {"name": "На животе", "minutes": 35}, {"name": "Левый бок", "minutes": 25}, {"name": "Правый бок", "minutes": 25}, {"name": "В тени", "minutes": 30}], "duration_min": 60},
-    {"step": 12, "positions": [{"name": "Лицом вверх", "minutes": 45}, {"name": "На животе", "minutes": 45}, {"name": "Левый бок", "minutes": 30}, {"name": "Правый бок", "minutes": 30}, {"name": "В тени", "minutes": 40}], "duration_min": 150}
+POSITIONS = ["Лицом вверх", "На животе", "Левый бок", "Правый бок", "В тени"]
+
+DURATIONS_MIN = [
+    [1.5, 1.5, 1.0, 1.0, 3.0],
+    [2.0, 2.0, 1.0, 1.0, 3.0],
+    [3.0, 3.0, 1.5, 1.5, 5.0],
+    [5.0, 5.0, 2.5, 2.5, 5.0],
+    [7.0, 7.0, 3.0, 3.0, 7.0],
+    [9.0, 9.0, 5.0, 5.0, 10.0],
+    [12.0, 12.0, 7.0, 7.0, 10.0],
+    [15.0, 15.0, 10.0, 10.0, 10.0],
+    [20.0, 20.0, 15.0, 15.0, 15.0],
+    [25.0, 25.0, 20.0, 20.0, 20.0],
+    [35.0, 35.0, 25.0, 25.0, 30.0],
+    [45.0, 45.0, 30.0, 30.0, 40.0],
 ]
+
+def format_duration(mins):
+    return f"{int(mins)} мин" if mins == int(mins) else f"{int(mins)} мин {int((mins - int(mins)) * 60)} сек"
