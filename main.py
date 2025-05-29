@@ -45,7 +45,8 @@ async def end(msg: types.Message):
     uid = msg.chat.id
     t = tasks.pop(uid, None)
     if t: t.cancel()
-    user_state[uid] = {"last_step": user_state.get(uid, {}).get("step", 1)}
+    last = user_state.get(uid, {}).get("step", 1)
+    user_state[uid] = {"last_step": last}
     step_completion_shown.discard(uid)
     await bot.send_message(uid, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
 
