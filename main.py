@@ -86,7 +86,7 @@ async def start_position(uid):
             reply_markup=get_control_keyboard(step)
         )
         state["position"] += 1
-        tasks[uid] = asyncio.create_task(run_timer(bot, uid, int(dur * 60), message, user_state, start_position))
+        tasks[uid] = asyncio.create_task(run_timer(bot, uid, int(dur * 60), message, user_state, start_position, step))
     except IndexError:
         if uid not in step_completion_shown:
             step_completion_shown.add(uid)
