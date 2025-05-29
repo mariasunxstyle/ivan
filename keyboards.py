@@ -35,6 +35,9 @@ def get_control_keyboard(step):
     if step <= 2:
         kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
     else:
+            if step <= 2:
+        kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
+    else:
         kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
     kb.add(KeyboardButton("📋 Вернуться к шагам"))
     return kb
@@ -44,6 +47,9 @@ def get_continue_keyboard(step):
     kb.add(KeyboardButton("▶️ Продолжить"))
     kb.add(KeyboardButton("📋 Вернуться к шагам"))
     if step <= 2:
+        kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
+    else:
+            if step <= 2:
         kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
     else:
         kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
