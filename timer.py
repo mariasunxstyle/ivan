@@ -31,6 +31,7 @@ async def start_position(uid):
                 message += "\nЕсли был перерыв — вернись на шаг 1."
             else:
                 message += "\nЕсли был перерыв — вернись на 2 шага назад."
+            await bot.send_message(uid, "⏰ Управление:")
             await bot.send_message(uid, message, reply_markup=get_continue_keyboard(step))
 
 async def timer(uid, seconds, msg, bot: Bot):
