@@ -61,7 +61,6 @@ async def back(msg: types.Message):
         state["step"] = 1 if step <= 2 else step - 2
         state["position"] = 0
     step_completion_shown.discard(uid)
-    await bot.send_message(uid, f"Шаг {user_state[uid]['step']}")
     await start_position(uid, bot)
 
 @dp.message_handler(lambda m: m.text == "📋 Вернуться к шагам")
@@ -82,7 +81,7 @@ async def continue_step(msg: types.Message):
     state["step"] += 1
     state["position"] = 0
     step_completion_shown.discard(uid)
-        await start_position(uid, bot)
+    await start_position(uid, bot)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
