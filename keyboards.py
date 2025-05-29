@@ -15,10 +15,11 @@ def get_control_keyboard(step):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     if step == 1:
         kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
-    elif step <= 2:
-        kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
     else:
-        kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
+        if step <= 2:
+            kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
+        else:
+            kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
     kb.add(KeyboardButton("⏭️ Пропустить"))
     kb.add(KeyboardButton("📋 Вернуться к шагам"))
     kb.add(KeyboardButton("⛔ Завершить"))
@@ -49,4 +50,3 @@ def end_keyboard():
         KeyboardButton("↩️ Назад на 2 шага (если был перерыв)")
     )
     return kb
-
