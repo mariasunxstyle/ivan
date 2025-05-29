@@ -1,40 +1,48 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-# Клавиатура с шагами (3 ряда по 4 шага)
-step_buttons = [
-    [KeyboardButton("Шаг 1"), KeyboardButton("Шаг 2"), KeyboardButton("Шаг 3"), KeyboardButton("Шаг 4")],
-    [KeyboardButton("Шаг 5"), KeyboardButton("Шаг 6"), KeyboardButton("Шаг 7"), KeyboardButton("Шаг 8")],
-    [KeyboardButton("Шаг 9"), KeyboardButton("Шаг 10"), KeyboardButton("Шаг 11"), KeyboardButton("Шаг 12")],
-    [KeyboardButton("ℹ️ Инфо")]
-]
-steps_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, keyboard=step_buttons)
+# Клавиатура со всеми шагами
+def steps_keyboard():
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
+    for i in range(12):
+        minutes = sum(DURATIONS_MIN[i])
+        label = f"{i+1} шаг ({int(minutes)} мин)" if minutes == int(minutes) else f"{i+1} шаг ({minutes:.1f} мин)"
+        keyboard.insert(KeyboardButton(label))
+    keyboard.add(KeyboardButton("ℹ️ Инфо"))
+    return keyboard
 
-# Кнопки управления во время выполнения шага
-def get_control_keyboard(step: int):
-    return ReplyKeyboardMarkup(resize_keyboard=True, keyboard=[
-        [KeyboardButton("⏭️ Пропустить")],
-        [KeyboardButton("⛔ Завершить")],
-        [KeyboardButton(get_back_button_label(step))],
-        [KeyboardButton("📋 Вернуться к шагам")]
-    ])
+# Кнопки управления во время шага
+def get_control_keyboard():
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add(KeyboardButton("⏭️ Пропустить"))
+    keyboard.add(KeyboardButton("⛔ Завершить"))
+    keyboard.add(KeyboardButton("↩️ Назад на 2 шага"))
+    keyboard.add(KeyboardButton("📋 Вернуться к шагам"))
+    return keyboard
 
 # Кнопки после завершения шага
-def get_continue_keyboard(step: int):
-    return ReplyKeyboardMarkup(resize_keyboard=True, keyboard=[[
+def get_continue_keyboard():
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add(
         KeyboardButton("▶️ Продолжить"),
         KeyboardButton("📋 Вернуться к шагам"),
-        KeyboardButton(get_back_button_label(step)),
-        KeyboardButton("⛔ Завершить")
-    ]])
+        KeyboardButton("↩️ Назад на 2 шага"),
+        KeyboardButton("⛔ Завершить"),
+    )
+    return keyboard
 
-# Кнопки после завершения сеанса
-end_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, keyboard=[[
+# Полная клавиатура (если нужно явно)
+control_keyboard_full = ReplyKeyboardMarkup(resize_keyboard=True).add(
+    KeyboardButton("⏭️ Пропустить")
+).add(
+    KeyboardButton("⛔ Завершить")
+).add(
+    KeyboardButton("↩️ Назад на 2 шага")
+).add(
+    KeyboardButton("📋 Вернуться к шагам")
+)
+
+# Просто клавиатура завершения
+end_keyboard = ReplyKeyboardMarkup(resize_keyboard=True).add(
     KeyboardButton("📋 Вернуться к шагам"),
-    KeyboardButton("↩️ Назад (если был перерыв)")
-]])
-
-# Название кнопки "назад" для шагов 1–2
-def get_back_button_label(step: int) -> str:
-    if step <= 2:
-        return "↩️ Вернуться к шагу 1"
-    return "↩️ Назад на 2 шага"
+    KeyboardButton("↩️ Назад на 2 шага"),
+)
