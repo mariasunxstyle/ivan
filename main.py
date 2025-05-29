@@ -31,7 +31,6 @@ async def handle_step(msg: types.Message):
     user_state[msg.chat.id] = {"step": step, "position": 0}
     step_completion_shown.discard(msg.chat.id)
     await start_position(msg.chat.id, bot)
-    await msg.answer(f"Шаг {step} начат.", reply_markup=get_control_keyboard(step))
 
 @dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
 async def skip(msg: types.Message):
@@ -45,7 +44,8 @@ async def end(msg: types.Message):
     uid = msg.chat.id
     t = tasks.pop(uid, None)
     if t: t.cancel()
-    user_state[uid] = {"last_step": user_state.get(uid, {}).get("step", 1)}
+    last = user_state.get(uid, {}).get("step", 1)
+    user_state[uid] = {"last_step": last}
     step_completion_shown.discard(uid)
     await bot.send_message(uid, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
 
@@ -82,9 +82,7 @@ async def continue_step(msg: types.Message):
     state["step"] += 1
     state["position"] = 0
     step_completion_shown.discard(uid)
-    await bot.send_message(uid, f"Шаг {state['step']}")
-    await start_position(uid, bot)
-    await msg.answer(f"Шаг {state['step']} начат.", reply_markup=get_control_keyboard(state['step']))
+        await start_position(uid, bot)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
