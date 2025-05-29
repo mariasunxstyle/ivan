@@ -31,6 +31,7 @@ async def handle_step(msg: types.Message):
     user_state[msg.chat.id] = {"step": step, "position": 0}
     step_completion_shown.discard(msg.chat.id)
     await start_position(msg.chat.id, bot)
+    await msg.answer(reply_markup=get_control_keyboard(step))
 
 @dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
 async def skip(msg: types.Message):
@@ -38,6 +39,7 @@ async def skip(msg: types.Message):
     t = tasks.pop(uid, None)
     if t: t.cancel()
     await start_position(uid, bot)
+    await msg.answer(reply_markup=get_control_keyboard(state["step"]))
 
 @dp.message_handler(lambda m: m.text == "⛔ Завершить")
 async def end(msg: types.Message):
@@ -62,6 +64,7 @@ async def back(msg: types.Message):
         state["position"] = 0
     step_completion_shown.discard(uid)
     await start_position(uid, bot)
+    await msg.answer(reply_markup=get_control_keyboard(state["step"]))
 
 @dp.message_handler(lambda m: m.text == "📋 Вернуться к шагам")
 async def menu(msg: types.Message):
@@ -82,6 +85,7 @@ async def continue_step(msg: types.Message):
     state["position"] = 0
     step_completion_shown.discard(uid)
     await start_position(uid, bot)
+    await msg.answer(reply_markup=get_control_keyboard(state["step"]))
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
