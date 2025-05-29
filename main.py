@@ -52,19 +52,16 @@ async def end(msg: types.Message):
 async def back(msg: types.Message):
     uid = msg.chat.id
     state = user_state.get(uid)
-        if not state:
-        last = user_state.get(uid, {}).get("last_step", 1)
-        user_state[uid] = {"step": 1, "position": 0} if last <= 2 else {"step": last - 2, "position": 0}
+    if not state:
         last = user_state.get(uid, {}).get("last_step", 1)
         user_state[uid] = {"step": 1, "position": 0} if last <= 2 else {"step": last - 2, "position": 0}
     else:
         step = state["step"]
-            state["step"] = 1 if step <= 2 else step - 2
+        state["step"] = 1 if step <= 2 else step - 2
         state["position"] = 0
     step_completion_shown.discard(uid)
-    await msg.answer(f"Шаг {user_state[uid]['step']}")
+    await msg.answer(f"Шаг {{user_state[uid]['step']}}")
     await start_position(uid)
-
 @dp.message_handler(lambda m: m.text == "📋 Вернуться к шагам")
 async def menu(msg: types.Message):
     uid = msg.chat.id
