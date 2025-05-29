@@ -3,12 +3,15 @@ import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
 import os
+from dotenv import load_dotenv
+
 
 from keyboards import steps_keyboard, get_continue_keyboard, get_control_keyboard, control_keyboard_full, end_keyboard
 from state import user_state, tasks, step_completion_shown
 from texts import GREETING, INFO_TEXT
 from timer import start_position
 
+load_dotenv()
 API_TOKEN = os.getenv("TOKEN")
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
