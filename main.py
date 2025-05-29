@@ -75,7 +75,7 @@ async def menu(msg: types.Message):
 async def continue_step(msg: types.Message):
     uid = msg.chat.id
     state = user_state.get(uid)
-        if not state:
+    if not state:
         last = user_state.get(uid, {}).get("last_step", 1)
         user_state[uid] = {"step": 1, "position": 0} if last <= 2 else {"step": last - 2, "position": 0}
         return
