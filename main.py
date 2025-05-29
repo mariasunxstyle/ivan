@@ -8,6 +8,7 @@ from aiogram.utils import executor
 from timer import run_timer
 from state import user_state, tasks, step_completion_shown
 from texts import GREETING, INFO_TEXT
+from position_logic import send_position_with_timer
 
 API_TOKEN = os.getenv("TOKEN")
 bot = Bot(token=API_TOKEN)
@@ -80,13 +81,8 @@ async def start_position(uid):
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step-1][pos]
-        message = await bot.send_message(
-            uid,
-            f"{name} — {format_duration(dur)}\n⏳ Таймер запущен...",
-            reply_markup=get_control_keyboard(step)
-        )
         state["position"] += 1
-        tasks[uid] = asyncio.create_task(run_timer(bot, uid, int(dur * 60), message, user_state, start_position, step))
+        await send_position_with_timer(bot, uid, name, dur, step, user_state, start_position, tasks)
     except IndexError:
         if uid not in step_completion_shown:
             step_completion_shown.add(uid)
