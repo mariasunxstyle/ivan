@@ -8,7 +8,7 @@ bar_states = [
     "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑", "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"
 ]
 
-async def run_timer(bot, uid, seconds, msg, user_state, start_position):
+async def run_timer(bot, uid, seconds, msg, user_state, start_position, step):
     start = time.monotonic()
     last_state = ""
     while True:
@@ -28,7 +28,8 @@ async def run_timer(bot, uid, seconds, msg, user_state, start_position):
                 await bot.edit_message_text(
                     text=msg.text.split("\n")[0] + "\n" + text,
                     chat_id=uid,
-                    message_id=msg.message_id
+                    message_id=msg.message_id,
+                    reply_markup=None
                 )
             except:
                 pass
