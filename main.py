@@ -18,7 +18,7 @@ dp = Dispatcher(bot)
 
 @dp.message_handler(commands=['start'])
 async def send_welcome(msg: types.Message):
-    await msg.answer(GREETING, reply_markup=steps_keyboard)
+    await msg.answer(GREETING, reply_markup=steps_keyboard())
 
 @dp.message_handler(commands=['info'])
 @dp.message_handler(lambda m: m.text == "ℹ️ Инфо")
@@ -47,7 +47,7 @@ async def end(msg: types.Message):
     if t: t.cancel()
     user_state[uid] = {"last_step": user_state.get(uid, {}).get("step", 1)}
     step_completion_shown.discard(uid)
-    await bot.send_message(uid, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
+    await bot.send_message(uid, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard())
 
 @dp.message_handler(lambda m: m.text.startswith("↩️"))
 async def back(msg: types.Message):
@@ -71,7 +71,7 @@ async def menu(msg: types.Message):
     if t: t.cancel()
     user_state.pop(uid, None)
     step_completion_shown.discard(uid)
-    await msg.answer("Выбери шаг:", reply_markup=steps_keyboard)
+    await msg.answer("Выбери шаг:", reply_markup=steps_keyboard())
 
 @dp.message_handler(lambda m: m.text == "▶️ Продолжить")
 async def continue_step(msg: types.Message):
@@ -89,3 +89,4 @@ async def continue_step(msg: types.Message):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     executor.start_polling(dp, skip_updates=True)
+
