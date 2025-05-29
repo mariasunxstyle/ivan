@@ -9,7 +9,6 @@ from state import user_state, tasks, step_completion_shown
 from steps import DURATIONS_MIN
 from texts import GREETING, INFO_TEXT
 from keyboards import steps_keyboard, get_control_keyboard, get_continue_keyboard, control_keyboard_full, end_keyboard
-from menu_keyboard import menu_keyboard
 from timer import start_position
 
 load_dotenv()
@@ -19,20 +18,12 @@ dp = Dispatcher(bot)
 
 @dp.message_handler(commands=['start'])
 async def send_welcome(msg: types.Message):
-    await msg.answer(GREETING, reply_markup=menu_keyboard)
-
-@dp.message_handler(lambda m: m.text == "▶️ Начать")
-async def begin(msg: types.Message):
-    await msg.answer("Выбери шаг:", reply_markup=steps_keyboard)
+    await msg.answer(GREETING, reply_markup=steps_keyboard)
 
 @dp.message_handler(commands=['info'])
 @dp.message_handler(lambda m: m.text == "ℹ️ Инфо")
 async def info(msg: types.Message):
     await msg.answer(INFO_TEXT)
-
-@dp.message_handler(lambda m: m.text == "📋 Выбрать шаг")
-async def select_step(msg: types.Message):
-    await msg.answer("Выбери шаг:", reply_markup=steps_keyboard)
 
 @dp.message_handler(lambda m: m.text.startswith("Шаг "))
 async def handle_step(msg: types.Message):
