@@ -1,9 +1,10 @@
 import asyncio
 import time
 from aiogram import Bot
-from keyboards import get_continue_keyboard, control_keyboard_full
+from keyboards import get_continue_keyboard, control_keyboard_full, get_control_keyboard
 from state import user_state, tasks, step_completion_shown
-from keyboards import POSITIONS, DURATIONS_MIN
+from keyboards import POSITIONS
+from steps import DURATIONS_MIN
 
 async def start_position(uid):
     from main import bot  # импорт внутри функции, чтобы избежать циклического импорта
@@ -18,7 +19,7 @@ async def start_position(uid):
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step-1][pos]
-                        message = await bot.send_message(uid, f"{name} — {format_duration(dur)}\n⏳ Таймер запущен...")
+        message = await bot.send_message(uid, f"{name} — {format_duration(dur)}\n⏳ Таймер запущен...")
         await bot.send_message(uid, "⏰ Управление:", reply_markup=get_control_keyboard(step))
         state["position"] += 1
         tasks[uid] = asyncio.create_task(timer(uid, int(dur * 60), message, bot))
@@ -32,7 +33,6 @@ async def start_position(uid):
                 message += "\nЕсли был перерыв — вернись на шаг 1."
             else:
                 message += "\nЕсли был перерыв — вернись на 2 шага назад."
-            await bot.send_message(uid, "⏰ Управление:")
             await bot.send_message(uid, message, reply_markup=get_continue_keyboard(step))
 
 async def timer(uid, seconds, msg, bot: Bot):
