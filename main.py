@@ -1,3 +1,4 @@
+
 import asyncio
 import logging
 import os
@@ -28,6 +29,9 @@ async def start_position(uid):
         await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
         return
     try:
+        if pos >= len(POSITIONS):
+            await bot.send_message(uid, "⚠️ Ошибка: недопустимая позиция. Попробуй начать заново.")
+            return
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step-1][pos]
                 if pos >= len(POSITIONS):
