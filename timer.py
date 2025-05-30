@@ -1,45 +1,39 @@
-
 import asyncio
+import time
 from aiogram import Bot
-from state import user_state, tasks, step_completion_shown
-from keyboards import get_control_keyboard
 
-# Позиции и длительности по умолчанию (замените на реальные при необходимости)
-POSITIONS = ["Лицом вверх", "На животе", "Левый бок", "Правый бок", "В тени"]
-DURATIONS = [
-    [8, 8, 5, 5, 10],  # пример длительности в минутах для шага 1
-    # Добавьте остальные шаги
+bar_states = [
+    "☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️☀️🌑🌑🌑🌑🌑🌑🌑",
+    "☀️☀️☀️☀️🌑🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️☀️🌑🌑🌑🌑",
+    "☀️☀️☀️☀️☀️☀️☀️🌑🌑🌑", "☀️☀️☀️☀️☀️☀️☀️☀️🌑🌑",
+    "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑", "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"
 ]
 
-async def start_position(bot: Bot, user_id: int):
-    state = user_state.get(user_id)
-    if not state:
-        return
+async def timer(uid, seconds, msg, bot: Bot, format_duration, user_state, start_position):
+    start = time.monotonic()
+    last_state = ""
+    while True:
+        elapsed = time.monotonic() - start
+        remaining = max(0, int(seconds - elapsed))
+        percent_done = min(elapsed / seconds, 1.0)
+        bar_index = min(int(percent_done * 10), 9)
 
-    step = state["step"]
-    position_index = state.get("position", 0)
-    durations = DURATIONS[step - 1] if step - 1 < len(DURATIONS) else []
-    tasks[user_id] = asyncio.create_task(run_positions(bot, user_id, durations, position_index))
+        bar = bar_states[bar_index]
+        minutes = remaining // 60
+        seconds_remain = remaining % 60
+        time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
+        text = f"⏳ Осталось: {time_label}\n{bar}"
 
-async def run_positions(bot: Bot, user_id: int, durations, start_index=0):
-    for i in range(start_index, len(POSITIONS)):
-        user_state[user_id]["position"] = i
-        minutes = durations[i]
-        text = f"{POSITIONS[i]} — {minutes} мин\n⏳ Таймер запущен..."
-        await bot.send_message(user_id, text, reply_markup=get_control_keyboard())
-        await asyncio.sleep(minutes * 60)  # ожидание таймера
-    step_completion_shown.add(user_id)
-    await bot.send_message(
-        user_id,
-        "Шаг завершён. Выбирай ▶️ Продолжить или отдохни ☀️.\nЕсли был перерыв — вернись на 2 шага назад.",
-        reply_markup=get_control_keyboard()
-    )
+        if text != last_state:
+            try:
+                await bot.edit_message_text(text=msg.text.split("\n")[0] + "\n" + text, chat_id=uid, message_id=msg.message_id)
+            except:
+                pass
+            last_state = text
 
-async def skip_to_next_position(bot: Bot, user_id: int):
-    task = tasks.get(user_id)
-    if task:
-        task.cancel()
-    state = user_state.get(user_id)
-    if state:
-        state["position"] += 1
-        await start_position(bot, user_id)
+        if remaining <= 0:
+            break
+        await asyncio.sleep(2)
+
+    if uid in user_state:
+        await start_position(uid)
