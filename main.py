@@ -32,6 +32,9 @@ async def start_position(uid):
         if pos >= len(POSITIONS):
             await bot.send_message(uid, "⚠️ Ошибка: недопустимая позиция. Попробуй начать заново.")
             return
+        if pos >= len(POSITIONS):
+            await bot.send_message(uid, "⚠️ Ошибка: недопустимая позиция. Попробуй начать заново.")
+            return
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step-1][pos]
                 if pos >= len(POSITIONS):
