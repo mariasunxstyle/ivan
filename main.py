@@ -3,10 +3,9 @@ import logging
 import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from dotenv import load_dotenv
 
-from keyboards import steps_keyboard, get_control_keyboard
+from keyboards import steps_keyboard, get_control_keyboard, get_continue_keyboard, control_keyboard_full, end_keyboard
 from state import user_state, tasks, step_completion_shown
 from texts import GREETING, INFO_TEXT
 from timer import start_position
@@ -27,43 +26,63 @@ async def info(msg: types.Message):
 
 @dp.message_handler(lambda m: m.text.startswith("Шаг "))
 async def handle_step(msg: types.Message):
-    try:
-        step = int(msg.text.split()[1])
-    except:
-        await msg.answer("Неверный формат шага. Попробуй снова.")
-        return
+    step = int(msg.text.split()[1])
     user_state[msg.chat.id] = {"step": step, "position": 0}
     step_completion_shown.discard(msg.chat.id)
     await start_position(bot, msg.chat.id)
 
-@dp.message_handler(lambda m: m.text == "📋 Вернуться к шагам")
-async def back_to_steps(msg: types.Message):
-    await msg.answer("Выбери шаг:", reply_markup=steps_keyboard)
-
-@dp.message_handler(lambda m: m.text == "↩️ Назад на 2 шага")
-@dp.message_handler(lambda m: m.text == "↩️ Назад на 2 шага (если был перерыв)")
-async def step_back(msg: types.Message):
-    state = user_state.get(msg.chat.id)
-    if state:
-        current_step = state.get("step", 1)
-        new_step = max(1, current_step - 2)
-        user_state[msg.chat.id] = {"step": new_step, "position": 0}
-        step_completion_shown.discard(msg.chat.id)
-        await msg.answer(f"Возврат на шаг {new_step}.")
-        await start_position(bot, msg.chat.id)
+@dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
+async def skip(msg: types.Message):
+    uid = msg.chat.id
+    t = tasks.pop(uid, None)
+    if t: t.cancel()
+    await start_position(bot, uid)
 
 @dp.message_handler(lambda m: m.text == "⛔ Завершить")
-async def end_session(msg: types.Message):
-    tasks.pop(msg.chat.id, None)
-    step_completion_shown.discard(msg.chat.id)
-    await msg.answer("Сеанс завершён. Можешь вернуться позже и начать заново ☀️",
-                     reply_markup=get_control_keyboard())
+async def end(msg: types.Message):
+    uid = msg.chat.id
+    t = tasks.pop(uid, None)
+    if t: t.cancel()
+    user_state[uid] = {"last_step": user_state.get(uid, {}).get("step", 1)}
+    step_completion_shown.discard(uid)
+    await bot.send_message(uid, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
 
-@dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
-async def skip_position(msg: types.Message):
-    from timer import skip_to_next_position
-    await skip_to_next_position(bot, msg.chat.id)
+@dp.message_handler(lambda m: m.text.startswith("↩️"))
+async def back(msg: types.Message):
+    uid = msg.chat.id
+    state = user_state.get(uid)
+    if not state:
+        last = user_state.get(uid, {}).get("last_step", 1)
+        user_state[uid] = {"step": 1, "position": 0} if last <= 2 else {"step": last - 2, "position": 0}
+    else:
+        step = state["step"]
+        state["step"] = 1 if step <= 2 else step - 2
+        state["position"] = 0
+    step_completion_shown.discard(uid)
+    await bot.send_message(uid, f"Шаг {user_state[uid]['step']}")
+    await start_position(bot, uid)
 
-if __name__ == '__main__':
+@dp.message_handler(lambda m: m.text == "📋 Вернуться к шагам")
+async def menu(msg: types.Message):
+    uid = msg.chat.id
+    t = tasks.pop(uid, None)
+    if t: t.cancel()
+    user_state.pop(uid, None)
+    step_completion_shown.discard(uid)
+    await msg.answer("Выбери шаг:", reply_markup=steps_keyboard)
+
+@dp.message_handler(lambda m: m.text == "▶️ Продолжить")
+async def continue_step(msg: types.Message):
+    uid = msg.chat.id
+    state = user_state.get(uid)
+    if not state:
+        return
+    state["step"] += 1
+    state["position"] = 0
+    step_completion_shown.discard(uid)
+    await bot.send_message(uid, f"Шаг {state['step']}")
+    await start_position(bot, uid)
+
+if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     executor.start_polling(dp, skip_updates=True)

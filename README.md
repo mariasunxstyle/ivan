@@ -1,43 +1,20 @@
+# SUNXSTYLE Bot (модульная структура)
 
-# SUNXSTYLE Bot
-
-Telegram-бот для безопасного загара по методу суперкомпенсации ☀️
-
-## Что делает бот
-
-- Показывает 12 шагов загара с таймингами и сменой позиций
-- Управляет таймером: «Пропустить», «Назад», «Завершить»
-- Помогает коже адаптироваться без ожогов
-- Работает только для подписчиков канала [@sunxstyle](https://t.me/sunxstyle)
-
-## Установка
-
-```bash
-git clone https://github.com/mariasunxstyle/ivan.git
-cd ivan
-python -m venv venv
-source venv/bin/activate  # или venv\Scripts\activate на Windows
-pip install -r requirements.txt
-```
+Telegram-бот для загара по методу суперкомпенсации ☀️
 
 ## Запуск
 
-Создайте файл `.env` с содержимым:
-
-```env
-TOKEN=ваш_telegram_bot_token
-```
-
-Запустите:
+Создай `.env` с переменной `TOKEN=<твой_токен>`, установи зависимости:
 
 ```bash
+pip install -r requirements.txt
 python main.py
 ```
 
-## Контакты
+## Структура
 
-Если есть вопросы: [@sunxbeach_director](https://t.me/sunxbeach_director)
-
----
-
-© SUNXSTYLE 2025 — для тех, кто выбирает осознанный загар ☀️
+- `main.py` — запуск и логика
+- `keyboards.py` — клавиатуры
+- `texts.py` — приветствие и инфо
+- `state.py` — шаги и позиции
+- `timer.py` — таймер с визуальной шкалой
