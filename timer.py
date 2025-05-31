@@ -1,36 +1,43 @@
-
 import asyncio
-from aiogram import types
-from bot import bot
-from keyboards import get_control_keyboard
-from state import user_state, tasks, step_completion_shown
-from texts import steps_data
+import time
+from steps import format_duration
 
-async def run_timer(uid, step_number):
-    state = user_state.get(uid)
-    if not state:
-        return
+user_state = {}
+tasks = {}
+step_completion_shown = set()
 
-    positions = steps_data[step_number - 1]['positions']
-    durations = steps_data[step_number - 1]['duration_min']
+async def run_timer(uid, seconds, msg, bot):
+    start = time.monotonic()
+    bar_states = [
+        "☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️☀️🌑🌑🌑🌑🌑🌑🌑",
+        "☀️☀️☀️☀️🌑🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️☀️🌑🌑🌑🌑",
+        "☀️☀️☀️☀️☀️☀️☀️🌑🌑🌑", "☀️☀️☀️☀️☀️☀️☀️☀️🌑🌑",
+        "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑", "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"
+    ]
+    last_state = ""
+    while True:
+        elapsed = time.monotonic() - start
+        remaining = max(0, int(seconds - elapsed))
+        percent_done = min(elapsed / seconds, 1.0)
+        bar_index = min(int(percent_done * 10), 9)
 
-    for i, (position, duration) in enumerate(zip(positions, durations)):
-        if state.get("cancelled"):
-            return
+        bar = bar_states[bar_index]
+        minutes = remaining // 60
+        seconds_remain = remaining % 60
+        time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
+        text = f"⏳ Осталось: {time_label}\n{bar}"
 
-        state["position"] = i
-        keyboard = get_control_keyboard(step_number)
+        if text != last_state:
+            try:
+                await bot.edit_message_text(text=msg.text.split("\n")[0] + "\n" + text, chat_id=uid, message_id=msg.message_id)
+            except:
+                pass
+            last_state = text
 
-        text = f"{position} — {duration} мин"
-        if i == 0:
-            text += "
+        if remaining <= 0:
+            break
+        await asyncio.sleep(2)
 
-↓"
-
-        await bot.send_message(uid, text, reply_markup=keyboard)
-        await asyncio.sleep(duration * 60)
-
-    step_completion_shown.add(uid)
-    await bot.send_message(uid, "Шаг завершён ☀️")
-    back_button = get_control_keyboard(step_number, after_step=True)
-    await bot.send_message(uid, "Можешь вернуться позже и начать заново.", reply_markup=back_button)
+    if uid in user_state:
+        from main import start_position
+        await start_position(uid)
