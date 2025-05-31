@@ -35,3 +35,5 @@ async def timer(uid, seconds, msg, bot: Bot, start_position_func):
         await asyncio.sleep(2)
 
     await start_position_func(uid)
+
+run_timer = timer  # alias for import compatibility
