@@ -32,35 +32,51 @@ async def start_position(uid):
     state = user_state.get(uid)
     if not state:
         return
+
     step = state["step"]
     pos = state["position"]
+
     if step > 12:
-        await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️", reply_markup=control_keyboard_full)
+        await bot.send_message(
+            uid,
+            "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\n"
+            "Кожа адаптировалась. Теперь можно поддерживать загар в своём ритме.",
+            reply_markup=control_keyboard_full
+        )
         return
+
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step - 1][pos]
-        text = f"{name} — {int(dur)} мин"
-        if name == "Лицом вверх":
-            text += "\n↓"
+        text = f"{name} — {int(dur)} мин\n⏳ Таймер запущен..."
 
-        message = await bot.send_message(uid, text + "\n⏳ Таймер запущен...", reply_markup=get_control_keyboard(step))
-        state["position"] += 1
-
-        # Сохраняем задачу для последующего управления
-        t = tasks.pop(uid, None)
-        if t:
-            t.cancel()
+        # Останавливаем предыдущий таймер, если есть
+        prev_task = tasks.pop(uid, None)
+        if prev_task:
+            prev_task.cancel()
             try:
-                await t
+                await prev_task
             except asyncio.CancelledError:
                 pass
 
+        # Отправляем основное сообщение с таймером
+        message = await bot.send_message(uid, text, reply_markup=get_control_keyboard(step))
+
+        # Если это "Лицом вверх", отправляем ↓ отдельным сообщением
+        if name == "Лицом вверх":
+            await bot.send_message(uid, "↓")
+
+        state["position"] += 1
         tasks[uid] = asyncio.create_task(run_timer(uid, int(dur * 60), message, bot))
 
     except IndexError:
         if step == 12:
-            await bot.send_message(uid, "Ты прошёл(ла) 12 шагов ☀️", reply_markup=control_keyboard_full)
+            await bot.send_message(
+                uid,
+                "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\n"
+                "Кожа адаптировалась. Теперь можно поддерживать загар в своём ритме.",
+                reply_markup=control_keyboard_full
+            )
         elif uid not in step_completion_shown:
             step_completion_shown.add(uid)
             msg = "Шаг завершён. Выбирай ▶️ Продолжить или отдохни ☀️."
