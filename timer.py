@@ -1,6 +1,5 @@
 import asyncio
 import time
-from steps import format_duration
 
 user_state = {}
 tasks = {}
@@ -29,15 +28,15 @@ async def run_timer(uid, seconds, msg, bot):
 
         if text != last_state:
             try:
-                await bot.edit_message_text(text=msg.text.split("\n")[0] + "\n" + text, chat_id=uid, message_id=msg.message_id)
+                await bot.edit_message_text(
+                    text=msg.text.split("\n")[0] + "\n" + text,
+                    chat_id=uid,
+                    message_id=msg.message_id
+                )
             except:
                 pass
             last_state = text
 
         if remaining <= 0:
-            break
+            return True  # <- сигнал о завершении таймера
         await asyncio.sleep(2)
-
-    if uid in user_state:
-        from main import start_position
-        await start_position(uid)
