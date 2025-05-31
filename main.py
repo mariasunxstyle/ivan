@@ -7,7 +7,6 @@ from aiogram.utils import executor
 from steps import steps_keyboard, get_continue_keyboard, get_control_keyboard, control_keyboard_full, end_keyboard, POSITIONS, DURATIONS_MIN
 from texts import GREETING, INFO_TEXT
 from timer import run_timer, user_state, tasks, step_completion_shown
-from position_logic import start_position
 
 API_TOKEN = os.getenv("TOKEN")
 bot = Bot(token=API_TOKEN)
@@ -27,15 +26,42 @@ async def handle_step(msg: types.Message):
     step = int(msg.text.split()[1])
     user_state[msg.chat.id] = {"step": step, "position": 0}
     step_completion_shown.discard(msg.chat.id)
-    await start_position(msg.chat.id, bot)
+    await start_position(msg.chat.id)
+
+async def start_position(uid):
+    state = user_state.get(uid)
+    if not state:
+        return
+    step = state["step"]
+    pos = state["position"]
+    if step > 12:
+        await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
+        return
+    try:
+        name = POSITIONS[pos]
+        dur = DURATIONS_MIN[step - 1][pos]
+        message = await bot.send_message(uid, f"{name} — {int(dur)} мин\n⏳ Таймер запущен...")
+        await bot.send_message(uid, "↓", reply_markup=get_control_keyboard(step))
+        state["position"] += 1
+        tasks[uid] = asyncio.create_task(run_timer(uid, int(dur * 60), message, bot))
+    except IndexError:
+        if step == 12:
+            await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
+        elif uid not in step_completion_shown:
+            step_completion_shown.add(uid)
+            message = "Шаг завершён. Выбирай ▶️ Продолжить или отдохни ☀️."
+            if step <= 2:
+                message += "\nЕсли был перерыв — вернись на шаг 1."
+            else:
+                message += "\nЕсли был перерыв — вернись на 2 шага назад."
+            await bot.send_message(uid, message, reply_markup=get_continue_keyboard(step))
 
 @dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
 async def skip(msg: types.Message):
     uid = msg.chat.id
     t = tasks.pop(uid, None)
     if t: t.cancel()
-    user_state[uid]["position"] += 1
-    await start_position(uid, bot)
+    await start_position(uid)
 
 @dp.message_handler(lambda m: m.text == "⛔ Завершить")
 async def end(msg: types.Message):
@@ -61,7 +87,7 @@ async def back(msg: types.Message):
         state["position"] = 0
     step_completion_shown.discard(uid)
     await bot.send_message(uid, f"Шаг {user_state[uid]['step']}")
-    await start_position(uid, bot)
+    await start_position(uid)
 
 @dp.message_handler(lambda m: m.text == "📋 Вернуться к шагам")
 async def menu(msg: types.Message):
@@ -82,7 +108,7 @@ async def continue_step(msg: types.Message):
     state["position"] = 0
     step_completion_shown.discard(uid)
     await bot.send_message(uid, f"Шаг {state['step']}")
-    await start_position(uid, bot)
+    await start_position(uid)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
