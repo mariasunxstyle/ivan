@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 import os
@@ -41,38 +40,53 @@ async def start_position(uid):
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step - 1][pos]
-        await bot.send_message(uid, f"{name} — {int(dur)} мин")
-        if name == "Лицом вверх":
-            await bot.send_message(uid, "↓", reply_markup=get_control_keyboard(step))
+        message = await bot.send_message(uid, f"{name} — {int(dur)} мин\n⏳ Таймер запущен...")
+        await bot.send_message(uid, "↓", reply_markup=get_control_keyboard(step))
         state["position"] += 1
-        tasks[uid] = asyncio.create_task(run_timer(uid, int(dur * 60), step, pos))
+        tasks[uid] = asyncio.create_task(run_timer(uid, int(dur * 60), message, bot))
     except IndexError:
-        if uid not in step_completion_shown:
+        if step == 12:
+            await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
+        elif uid not in step_completion_shown:
             step_completion_shown.add(uid)
-            await bot.send_message(uid, f"Шаг {step} завершён.")
-            await bot.send_message(uid, "Можешь вернуться позже и начать заново ☀️", reply_markup=get_continue_keyboard(step))
+            message = "Шаг завершён. Выбирай ▶️ Продолжить или отдохни ☀️."
+            if step <= 2:
+                message += "\nЕсли был перерыв — вернись на шаг 1."
+            else:
+                message += "\nЕсли был перерыв — вернись на 2 шага назад."
+            await bot.send_message(uid, message, reply_markup=get_continue_keyboard(step))
+
+@dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
+async def skip(msg: types.Message):
+    uid = msg.chat.id
+    t = tasks.pop(uid, None)
+    if t: t.cancel()
+    await start_position(uid)
 
 @dp.message_handler(lambda m: m.text == "⛔ Завершить")
 async def end(msg: types.Message):
     uid = msg.chat.id
     t = tasks.pop(uid, None)
     if t: t.cancel()
-    state = user_state.get(uid, {})
-    last_step = state.get("step", 1)
-    user_state[uid] = {"last_step": last_step}
+    user_state[uid] = {"last_step": user_state.get(uid, {}).get("step", 1)}
     step_completion_shown.discard(uid)
-    await bot.send_message(uid, f"Шаг {last_step} завершён.")
-    await bot.send_message(uid, "Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
+    step = user_state.get(uid, {}).get("step", "?")
+    await bot.send_message(uid, f"Шаг {step} завершён.")
+    await bot.send_message(uid, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
 
-@dp.message_handler(lambda m: m.text == "↩️ Назад на 2 шага (после перерыва)" or m.text.startswith("↩️ Назад"))
+@dp.message_handler(lambda m: m.text.startswith("↩️"))
 async def back(msg: types.Message):
     uid = msg.chat.id
     state = user_state.get(uid)
-    last = state.get("last_step", 1) if state else 1
-    new_step = 1 if last <= 2 else last - 2
-    user_state[uid] = {"step": new_step, "position": 0}
+    if not state:
+        last = user_state.get(uid, {}).get("last_step", 1)
+        user_state[uid] = {"step": 1, "position": 0} if last <= 2 else {"step": last - 2, "position": 0}
+    else:
+        step = state["step"]
+        state["step"] = 1 if step <= 2 else step - 2
+        state["position"] = 0
     step_completion_shown.discard(uid)
-    await bot.send_message(uid, f"Шаг {new_step}")
+    await bot.send_message(uid, f"Шаг {user_state[uid]['step']}")
     await start_position(uid)
 
 @dp.message_handler(lambda m: m.text == "📋 Вернуться к шагам")
@@ -90,12 +104,12 @@ async def continue_step(msg: types.Message):
     state = user_state.get(uid)
     if not state:
         return
-    step = state["step"] + 1
-    user_state[uid] = {"step": step, "position": 0}
+    state["step"] += 1
+    state["position"] = 0
     step_completion_shown.discard(uid)
-    await bot.send_message(uid, f"Шаг {step}")
+    await bot.send_message(uid, f"Шаг {state['step']}")
     await start_position(uid)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     executor.start_polling(dp, skip_updates=True)

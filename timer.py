@@ -1,12 +1,8 @@
-import asyncio
 import time
-from steps import format_duration
+import asyncio
+from aiogram import Bot
 
-user_state = {}
-tasks = {}
-step_completion_shown = set()
-
-async def run_timer(uid, seconds, msg, bot):
+async def timer(uid, seconds, msg, bot: Bot, start_position_func):
     start = time.monotonic()
     bar_states = [
         "☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️☀️🌑🌑🌑🌑🌑🌑🌑",
@@ -38,6 +34,4 @@ async def run_timer(uid, seconds, msg, bot):
             break
         await asyncio.sleep(2)
 
-    if uid in user_state:
-        from main import start_position
-        await start_position(uid)
+    await start_position_func(uid)
