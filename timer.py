@@ -6,6 +6,9 @@ user_state = {}
 tasks = {}
 step_completion_shown = set()
 
+# Эта функция будет устанавливаться отдельно из main.py
+start_position_callback = None
+
 async def run_timer(uid, seconds, msg, bot):
     start = time.monotonic()
     bar_states = [
@@ -15,6 +18,7 @@ async def run_timer(uid, seconds, msg, bot):
         "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑", "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"
     ]
     last_state = ""
+
     while True:
         elapsed = time.monotonic() - start
         remaining = max(0, int(seconds - elapsed))
@@ -29,15 +33,20 @@ async def run_timer(uid, seconds, msg, bot):
 
         if text != last_state:
             try:
-                await bot.edit_message_text(text=msg.text.split("\n")[0] + "\n" + text, chat_id=uid, message_id=msg.message_id)
+                await bot.edit_message_text(
+                    text=msg.text.split("\n")[0] + "\n" + text,
+                    chat_id=uid,
+                    message_id=msg.message_id
+                )
             except:
                 pass
             last_state = text
 
         if remaining <= 0:
             break
+
         await asyncio.sleep(2)
 
-    if uid in user_state:
-        from main import start_position
-        await start_position(uid)
+    # ⏱ Запускаем следующий шаг
+    if start_position_callback and uid in user_state:
+        await start_position_callback(uid)
