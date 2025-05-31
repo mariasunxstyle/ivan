@@ -34,10 +34,20 @@ async def run_timer(uid, seconds, msg, bot):
                 pass
             last_state = text
 
-        if remaining <= 0:
-            break
-        await asyncio.sleep(2)
-
+        
     if uid in user_state:
-        from main import start_position
-        await start_position(uid)
+        from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+        from keyboards import steps_keyboard
+
+        step = user_state[uid]["step"]
+        if step <= 2:
+            back_button = ReplyKeyboardMarkup(resize_keyboard=True)
+            back_button.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
+            back_button.add(KeyboardButton("📋 Вернуться к шагам"))
+            await bot.send_message(uid, "Шаг завершён ☀️
+Можешь вернуться позже и начать заново.", reply_markup=back_button)
+        else:
+            await bot.send_message(uid, "Шаг завершён ☀️
+Можешь вернуться позже и начать заново.", reply_markup=steps_keyboard)
+        step_completion_shown.add(uid)
+
