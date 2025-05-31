@@ -1,21 +1,43 @@
 import asyncio
-from keyboards import get_control_keyboard
-from state import user_state, step_completion_shown
-from steps import STEPS
+import time
+from steps import format_duration
 
-async def run_timer(bot, chat_id, step_number):
-    step_data = next((s for s in STEPS if s["step"] == step_number), None)
-    if not step_data:
-        return
+user_state = {}
+tasks = {}
+step_completion_shown = set()
 
-    for idx, (position, duration) in enumerate(zip(step_data["positions"], step_data["duration_min"])):
-        await bot.send_message(chat_id, f"{position} — {int(duration)} мин")
+async def run_timer(uid, seconds, msg, bot):
+    start = time.monotonic()
+    bar_states = [
+        "☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️☀️🌑🌑🌑🌑🌑🌑🌑",
+        "☀️☀️☀️☀️🌑🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️☀️🌑🌑🌑🌑",
+        "☀️☀️☀️☀️☀️☀️☀️🌑🌑🌑", "☀️☀️☀️☀️☀️☀️☀️☀️🌑🌑",
+        "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑", "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"
+    ]
+    last_state = ""
+    while True:
+        elapsed = time.monotonic() - start
+        remaining = max(0, int(seconds - elapsed))
+        percent_done = min(elapsed / seconds, 1.0)
+        bar_index = min(int(percent_done * 10), 9)
 
-        if idx == 0:
-            await bot.send_message(chat_id, "↓", reply_markup=get_control_keyboard(step_number))
+        bar = bar_states[bar_index]
+        minutes = remaining // 60
+        seconds_remain = remaining % 60
+        time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
+        text = f"⏳ Осталось: {time_label}\n{bar}"
 
-        await asyncio.sleep(1)
+        if text != last_state:
+            try:
+                await bot.edit_message_text(text=msg.text.split("\n")[0] + "\n" + text, chat_id=uid, message_id=msg.message_id)
+            except:
+                pass
+            last_state = text
 
-    if chat_id not in step_completion_shown:
-        await bot.send_message(chat_id, "Шаг завершён ☀️")
-        step_completion_shown.add(chat_id)
+        if remaining <= 0:
+            break
+        await asyncio.sleep(2)
+
+    if uid in user_state:
+        from main import start_position
+        await start_position(uid)
