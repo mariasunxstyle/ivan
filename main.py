@@ -1,3 +1,4 @@
+
 import asyncio
 import logging
 import os
@@ -7,6 +8,7 @@ from aiogram.utils import executor
 from steps import steps_keyboard, get_continue_keyboard, get_control_keyboard, control_keyboard_full, end_keyboard, POSITIONS, DURATIONS_MIN
 from texts import GREETING, INFO_TEXT
 from timer import run_timer, user_state, tasks, step_completion_shown
+from eventlog import log_event, get_event_stats
 
 API_TOKEN = os.getenv("TOKEN")
 bot = Bot(token=API_TOKEN)
@@ -14,6 +16,7 @@ dp = Dispatcher(bot)
 
 @dp.message_handler(commands=['start'])
 async def send_welcome(msg: types.Message):
+    log_event("started")
     await msg.answer(GREETING, reply_markup=steps_keyboard)
 
 @dp.message_handler(commands=['info'])
@@ -21,8 +24,13 @@ async def send_welcome(msg: types.Message):
 async def info(msg: types.Message):
     await msg.answer(INFO_TEXT)
 
+@dp.message_handler(commands=['events'])
+async def show_event_stats(msg: types.Message):
+    await msg.answer(get_event_stats())
+
 @dp.message_handler(lambda m: m.text.startswith("Шаг "))
 async def handle_step(msg: types.Message):
+    log_event("steps_started")
     step = int(msg.text.split()[1])
     user_state[msg.chat.id] = {"step": step, "position": 0}
     step_completion_shown.discard(msg.chat.id)
@@ -75,6 +83,7 @@ async def end(msg: types.Message):
         "position": 0
     }
     step_completion_shown.discard(uid)
+    log_event("sessions_ended")
     await bot.send_message(uid, f"Шаг {current_step} завершён.")
     await bot.send_message(uid, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
 
