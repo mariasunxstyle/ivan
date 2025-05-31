@@ -34,19 +34,34 @@ async def start_position(uid):
         return
     step = state["step"]
     pos = state["position"]
+
     if step > 12:
-        await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
+        await bot.send_message(
+            uid,
+            "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.",
+            reply_markup=control_keyboard_full
+        )
         return
+
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step - 1][pos]
-        message = await bot.send_message(uid, f"{name} — {int(dur)} мин\n⏳ Таймер запущен...")
-        await bot.send_message(uid, "↓", reply_markup=get_control_keyboard(step))
+        text = f"{name} — {int(dur)} мин"
+        if name == "Лицом вверх":
+            text += "\n↓"
+        text += "\n⏳ Таймер запущен..."
+
+        message = await bot.send_message(uid, text, reply_markup=get_control_keyboard(step))
         state["position"] += 1
         tasks[uid] = asyncio.create_task(run_timer(uid, int(dur * 60), message, bot))
+
     except IndexError:
         if step == 12:
-            await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
+            await bot.send_message(
+                uid,
+                "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.",
+                reply_markup=control_keyboard_full
+            )
         elif uid not in step_completion_shown:
             step_completion_shown.add(uid)
             message = "Шаг завершён. Выбирай ▶️ Продолжить или отдохни ☀️."
