@@ -6,7 +6,8 @@ from aiogram.utils import executor
 
 from steps import steps_keyboard, get_continue_keyboard, get_control_keyboard, control_keyboard_full, end_keyboard, POSITIONS, DURATIONS_MIN
 from texts import GREETING, INFO_TEXT
-from timer import run_timer, user_state, tasks, step_completion_shown
+from timer import run_timer
+from state import user_state, tasks, step_completion_shown
 
 API_TOKEN = os.getenv("TOKEN")
 bot = Bot(token=API_TOKEN)
