@@ -41,8 +41,10 @@ async def start_position(uid):
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step - 1][pos]
         message = await bot.send_message(uid, f"{name} — {int(dur)} мин\n⏳ Таймер запущен...")
-        await bot.send_message(uid, "↓", reply_markup=get_control_keyboard(step))
-        state["position"] += 1
+        text = f"{position} — {duration} мин"
+if position == "Лицом вверх":
+    text += "\n↓"
+await bot.send_message(uid, text, reply_markup=control_keyboard)
         tasks[uid] = asyncio.create_task(run_timer(uid, int(dur * 60), message, bot))
     except IndexError:
         if step == 12:
