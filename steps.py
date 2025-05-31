@@ -20,6 +20,7 @@ DURATIONS_MIN = [
 def format_duration(mins):
     return f"{int(mins)} мин" if mins == int(mins) else f"{int(mins)} мин {int((mins - int(mins)) * 60)} сек"
 
+# Шаги
 steps_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=4)
 step_buttons = []
 for i, row in enumerate(DURATIONS_MIN):
@@ -32,33 +33,29 @@ for i in range(0, len(step_buttons), 4):
     steps_keyboard.add(*step_buttons[i:i + 4])
 steps_keyboard.add(KeyboardButton("ℹ️ Инфо"))
 
+# Управление во время шага — без "↩️ Назад"
 def get_control_keyboard(step):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add(KeyboardButton("⏭️ Пропустить"))
     kb.add(KeyboardButton("⛔ Завершить"))
-    if step <= 2:
-        kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
-    else:
-        kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
     kb.add(KeyboardButton("📋 Вернуться к шагам"))
     return kb
 
+# После завершения шага вручную — без "↩️ Назад"
 def get_continue_keyboard(step):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add(KeyboardButton("▶️ Продолжить"))
     kb.add(KeyboardButton("📋 Вернуться к шагам"))
-    if step <= 2:
-        kb.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
-    else:
-        kb.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
     kb.add(KeyboardButton("⛔ Завершить"))
     return kb
 
+# После завершения последнего шага
 control_keyboard_full = ReplyKeyboardMarkup(resize_keyboard=True)
 control_keyboard_full.add(KeyboardButton("📋 Вернуться к шагам"))
 control_keyboard_full.add(KeyboardButton("↩️ Назад на 2 шага (после перерыва)"))
 control_keyboard_full.add(KeyboardButton("⛔ Завершить"))
 
+# После нажатия "Завершить"
 end_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
 end_keyboard.add(
     KeyboardButton("📋 Вернуться к шагам"),
