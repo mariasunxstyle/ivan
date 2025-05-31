@@ -27,6 +27,10 @@ async def handle_step(msg: types.Message):
     user_state[msg.chat.id] = {"step": step, "position": 0}
     step_completion_shown.discard(msg.chat.id)
     await start_position(msg.chat.id)
+    
+# Устанавливаем callback для таймера, чтобы он мог вызывать start_position заново
+import timer
+timer.start_position_callback = start_position
 
 async def start_position(uid):
     state = user_state.get(uid)
