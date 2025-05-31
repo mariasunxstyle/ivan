@@ -40,14 +40,20 @@ async def start_position(uid):
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step - 1][pos]
-        text = f"{name} — {int(dur)} мин\n⏳ Таймер запущен..."
-        message = await bot.send_message(uid, text, reply_markup=get_control_keyboard(step))
+        
+        # сообщение с кнопками — отдельно
+        await bot.send_message(uid, f"{name} — {int(dur)} мин", reply_markup=get_control_keyboard(step))
 
+        # стрелка — если нужно
         if name == "Лицом вверх":
             await bot.send_message(uid, "↓")
 
+        # таймер — отдельное сообщение, без кнопок
+        message = await bot.send_message(uid, "⏳ Таймер запущен...")
+
         state["position"] += 1
         tasks[uid] = asyncio.create_task(run_timer(uid, int(dur * 60), message, bot))
+
     except IndexError:
         if step == 12:
             await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
