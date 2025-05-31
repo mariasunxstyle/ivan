@@ -68,10 +68,14 @@ async def end(msg: types.Message):
     uid = msg.chat.id
     t = tasks.pop(uid, None)
     if t: t.cancel()
-    user_state[uid] = {"last_step": user_state.get(uid, {}).get("step", 1)}
+    current_step = user_state.get(uid, {}).get("step", 1)
+    user_state[uid] = {
+        "last_step": current_step,
+        "step": current_step,
+        "position": 0
+    }
     step_completion_shown.discard(uid)
-    step = user_state.get(uid, {}).get("step", "?")
-    await bot.send_message(uid, f"Шаг {step} завершён.")
+    await bot.send_message(uid, f"Шаг {current_step} завершён.")
     await bot.send_message(uid, "Сеанс завершён. Можешь вернуться позже и начать заново ☀️", reply_markup=end_keyboard)
 
 @dp.message_handler(lambda m: m.text.startswith("↩️"))
