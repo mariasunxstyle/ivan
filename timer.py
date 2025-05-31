@@ -44,10 +44,10 @@ async def run_timer(uid, seconds, msg, bot):
             back_button = ReplyKeyboardMarkup(resize_keyboard=True)
             back_button.add(KeyboardButton("↩️ Назад на шаг 1 (если был перерыв)"))
             back_button.add(KeyboardButton("📋 Вернуться к шагам"))
-            await bot.send_message(uid, "Шаг завершён ☀️
+    await bot.send_message(uid, "Шаг завершён ☀️")
 Можешь вернуться позже и начать заново.", reply_markup=back_button)
         else:
-            await bot.send_message(uid, "Шаг завершён ☀️
+    await bot.send_message(uid, "Шаг завершён ☀️")
 Можешь вернуться позже и начать заново.", reply_markup=steps_keyboard)
         step_completion_shown.add(uid)
 
