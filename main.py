@@ -27,68 +27,34 @@ async def handle_step(msg: types.Message):
     user_state[msg.chat.id] = {"step": step, "position": 0}
     step_completion_shown.discard(msg.chat.id)
     await start_position(msg.chat.id)
-    
-# Устанавливаем callback для таймера, чтобы он мог вызывать start_position заново
-import timer
-timer.start_position_callback = start_position
 
 async def start_position(uid):
     state = user_state.get(uid)
     if not state:
         return
-
     step = state["step"]
     pos = state["position"]
-
     if step > 12:
-        await bot.send_message(
-            uid,
-            "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\n"
-            "Кожа адаптировалась. Теперь можно поддерживать загар в своём ритме.",
-            reply_markup=control_keyboard_full
-        )
+        await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
         return
-
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step - 1][pos]
-        text = f"{name} — {int(dur)} мин\n⏳ Таймер запущен..."
-
-        # Останавливаем предыдущий таймер, если есть
-        prev_task = tasks.pop(uid, None)
-        if prev_task:
-            prev_task.cancel()
-            try:
-                await prev_task
-            except asyncio.CancelledError:
-                pass
-
-        # Отправляем основное сообщение с таймером
-        message = await bot.send_message(uid, text, reply_markup=get_control_keyboard(step))
-
-        # Если это "Лицом вверх", отправляем ↓ отдельным сообщением
-        if name == "Лицом вверх":
-            await bot.send_message(uid, "↓")
-
+        message = await bot.send_message(uid, f"{name} — {int(dur)} мин\n⏳ Таймер запущен...")
+        await bot.send_message(uid, "↓", reply_markup=get_control_keyboard(step))
         state["position"] += 1
         tasks[uid] = asyncio.create_task(run_timer(uid, int(dur * 60), message, bot))
-
     except IndexError:
         if step == 12:
-            await bot.send_message(
-                uid,
-                "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\n"
-                "Кожа адаптировалась. Теперь можно поддерживать загар в своём ритме.",
-                reply_markup=control_keyboard_full
-            )
+            await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
         elif uid not in step_completion_shown:
             step_completion_shown.add(uid)
-            msg = "Шаг завершён. Выбирай ▶️ Продолжить или отдохни ☀️."
+            message = "Шаг завершён. Выбирай ▶️ Продолжить или отдохни ☀️."
             if step <= 2:
-                msg += "\nЕсли был перерыв — вернись на шаг 1."
+                message += "\nЕсли был перерыв — вернись на шаг 1."
             else:
-                msg += "\nЕсли был перерыв — вернись на 2 шага назад."
-            await bot.send_message(uid, msg, reply_markup=get_continue_keyboard(step))
+                message += "\nЕсли был перерыв — вернись на 2 шага назад."
+            await bot.send_message(uid, message, reply_markup=get_continue_keyboard(step))
 
 @dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
 async def skip(msg: types.Message):
