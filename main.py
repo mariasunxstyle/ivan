@@ -35,36 +35,40 @@ async def start_position(uid):
     step = state["step"]
     pos = state["position"]
     if step > 12:
-        await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
+        await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️", reply_markup=control_keyboard_full)
         return
     try:
         name = POSITIONS[pos]
         dur = DURATIONS_MIN[step - 1][pos]
-        
-        # сообщение с кнопками — отдельно
-        await bot.send_message(uid, f"{name} — {int(dur)} мин", reply_markup=get_control_keyboard(step))
-
-        # стрелка — если нужно
+        text = f"{name} — {int(dur)} мин"
         if name == "Лицом вверх":
-            await bot.send_message(uid, "↓")
+            text += "\n↓"
 
-        # таймер — отдельное сообщение, без кнопок
-        message = await bot.send_message(uid, "⏳ Таймер запущен...")
-
+        message = await bot.send_message(uid, text + "\n⏳ Таймер запущен...", reply_markup=get_control_keyboard(step))
         state["position"] += 1
+
+        # Сохраняем задачу для последующего управления
+        t = tasks.pop(uid, None)
+        if t:
+            t.cancel()
+            try:
+                await t
+            except asyncio.CancelledError:
+                pass
+
         tasks[uid] = asyncio.create_task(run_timer(uid, int(dur * 60), message, bot))
 
     except IndexError:
         if step == 12:
-            await bot.send_message(uid, "Ты прошёл(ла) 12 шагов по методу суперкомпенсации ☀️\nКожа адаптировалась. Теперь можно поддерживать загар в своём ритме.", reply_markup=control_keyboard_full)
+            await bot.send_message(uid, "Ты прошёл(ла) 12 шагов ☀️", reply_markup=control_keyboard_full)
         elif uid not in step_completion_shown:
             step_completion_shown.add(uid)
-            message = "Шаг завершён. Выбирай ▶️ Продолжить или отдохни ☀️."
+            msg = "Шаг завершён. Выбирай ▶️ Продолжить или отдохни ☀️."
             if step <= 2:
-                message += "\nЕсли был перерыв — вернись на шаг 1."
+                msg += "\nЕсли был перерыв — вернись на шаг 1."
             else:
-                message += "\nЕсли был перерыв — вернись на 2 шага назад."
-            await bot.send_message(uid, message, reply_markup=get_continue_keyboard(step))
+                msg += "\nЕсли был перерыв — вернись на 2 шага назад."
+            await bot.send_message(uid, msg, reply_markup=get_continue_keyboard(step))
 
 @dp.message_handler(lambda m: m.text == "⏭️ Пропустить")
 async def skip(msg: types.Message):
