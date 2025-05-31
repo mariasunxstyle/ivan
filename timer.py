@@ -1,43 +1,21 @@
-import time
 import asyncio
-from aiogram import Bot
+from keyboards import get_control_keyboard
+from state import user_state, step_completion_shown
+from steps import STEPS
 
-async def run_timer(bot: Bot, uid: int, duration_sec: int, message, on_complete=None):
-    start = time.monotonic()
-    bar_states = [
-        "☀️🌑🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️🌑🌑🌑🌑🌑🌑🌑🌑", "☀️☀️☀️🌑🌑🌑🌑🌑🌑🌑",
-        "☀️☀️☀️☀️🌑🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️🌑🌑🌑🌑🌑", "☀️☀️☀️☀️☀️☀️🌑🌑🌑🌑",
-        "☀️☀️☀️☀️☀️☀️☀️🌑🌑🌑", "☀️☀️☀️☀️☀️☀️☀️☀️🌑🌑",
-        "☀️☀️☀️☀️☀️☀️☀️☀️☀️🌑", "☀️☀️☀️☀️☀️☀️☀️☀️☀️☀️"
-    ]
-    last = ""
+async def run_timer(bot, chat_id, step_number):
+    step_data = next((s for s in STEPS if s["step"] == step_number), None)
+    if not step_data:
+        return
 
-    while True:
-        elapsed = time.monotonic() - start
-        remaining = max(0, int(duration_sec - elapsed))
-        percent_done = min(elapsed / duration_sec, 1.0)
-        bar_index = min(int(percent_done * 10), 9)
+    for idx, (position, duration) in enumerate(zip(step_data["positions"], step_data["duration_min"])):
+        await bot.send_message(chat_id, f"{position} — {int(duration)} мин")
 
-        bar = bar_states[bar_index]
-        minutes = remaining // 60
-        seconds_remain = remaining % 60
-        time_label = f"{minutes} мин {seconds_remain} сек" if minutes > 0 else f"{seconds_remain} сек"
-        text = f"⏳ Осталось: {time_label}\n{bar}"
+        if idx == 0:
+            await bot.send_message(chat_id, "↓", reply_markup=get_control_keyboard(step_number))
 
-        if text != last:
-            try:
-                await bot.edit_message_text(
-                    text=message.text.split('\n')[0] + '\n' + text,
-                    chat_id=uid,
-                    message_id=message.message_id
-                )
-            except:
-                pass
-            last = text
+        await asyncio.sleep(1)
 
-        if remaining <= 0:
-            break
-        await asyncio.sleep(2)
-
-    if on_complete:
-        await on_complete()
+    if chat_id not in step_completion_shown:
+        await bot.send_message(chat_id, "Шаг завершён ☀️")
+        step_completion_shown.add(chat_id)
